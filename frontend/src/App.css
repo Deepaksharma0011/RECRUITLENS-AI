@@ -796,28 +796,74 @@ body.theme-light .avatar-badge {
 
 .modal-tabs {
   display: flex;
-  gap: 1rem;
-  padding: 0 2rem;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.65rem 1.25rem;
   background: var(--bg-surface);
   border-bottom: 1px solid var(--border-color);
+  overflow-x: auto;
+  overflow-y: hidden;
+  white-space: nowrap;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-color) transparent;
+  flex-shrink: 0;
+}
+
+.modal-tabs::-webkit-scrollbar {
+  height: 4px;
+}
+
+.modal-tabs::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.modal-tabs::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 4px;
 }
 
 .tab-btn {
-  padding: 0.85rem 1rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.5rem 0.9rem;
   background: transparent;
   color: var(--text-muted);
   font-weight: 600;
-  font-size: 0.88rem;
-  border-bottom: 2px solid transparent;
+  font-size: 0.82rem;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  white-space: nowrap;
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+  line-height: 1.2;
+}
+
+.tab-btn:hover {
+  color: var(--text-main);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+body.theme-light .tab-btn:hover {
+  background: rgba(0, 0, 0, 0.05);
 }
 
 .tab-btn.active {
   color: var(--primary);
-  border-bottom-color: var(--primary);
+  background: rgba(99, 102, 241, 0.12);
+  border-color: rgba(99, 102, 241, 0.3);
+  font-weight: 700;
+}
+
+body.theme-light .tab-btn.active {
+  color: #2563eb;
+  background: rgba(37, 99, 235, 0.1);
+  border-color: rgba(37, 99, 235, 0.25);
 }
 
 .modal-body {
-  padding: 2rem;
+  padding: 1.5rem 1.75rem;
   overflow-y: auto;
   flex: 1;
 }
@@ -826,31 +872,43 @@ body.theme-light .avatar-badge {
 .question-card {
   background: var(--bg-surface);
   border: 1px solid var(--border-color);
-  border-left: 3px solid var(--accent-cyan);
+  border-left: 4px solid var(--accent-cyan);
   border-radius: var(--radius-md);
   padding: 1.25rem;
   margin-bottom: 1rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+  transition: border-color 0.2s ease, transform 0.15s ease;
+}
+
+.question-card:hover {
+  border-color: rgba(6, 182, 212, 0.35);
 }
 
 .question-cat {
+  display: inline-flex;
+  align-items: center;
   font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  font-weight: 700;
+  font-weight: 800;
   color: var(--accent-cyan);
+  background: rgba(6, 182, 212, 0.12);
+  padding: 3px 8px;
+  border-radius: 6px;
 }
 
 .question-text {
-  font-size: 0.98rem;
-  font-weight: 600;
-  color: var(--text-main);
-  margin: 0.4rem 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-main) !important;
+  margin: 0.6rem 0 0.4rem 0;
+  line-height: 1.55;
 }
 
 .question-rationale {
-  font-size: 0.82rem;
+  font-size: 0.84rem;
   color: var(--text-muted);
-  font-style: italic;
+  line-height: 1.45;
 }
 
 /* Pre / Sanitized Text code block */

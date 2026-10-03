@@ -67,7 +67,7 @@ const KnockoutFilterModal = ({
               <AlertOctagon size={22} color="#f43f5e" />
             </div>
             <div>
-              <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#fff', margin: 0 }}>
+              <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
                 Hard Filters & Knockout Criteria
               </h2>
               <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>

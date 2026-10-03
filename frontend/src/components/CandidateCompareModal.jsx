@@ -17,13 +17,13 @@ const CandidateCompareModal = ({ candidates, onClose, blindMode }) => {
             <span style={{ fontSize: '0.75rem', color: 'var(--accent-purple)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
               Head-to-Head Candidate Evaluation
             </span>
-            <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#fff', margin: '4px 0 0 0' }}>
+            <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--text-main)', margin: '4px 0 0 0' }}>
               Candidate Comparison Matrix ({candidates.length})
             </h2>
           </div>
           <button
             onClick={onClose}
-            style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-color)', color: '#fff', width: '36px', height: '36px', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-color)', color: 'var(--text-muted)', width: '36px', height: '36px', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
           >
             <X size={18} />
           </button>
@@ -47,12 +47,12 @@ const CandidateCompareModal = ({ candidates, onClose, blindMode }) => {
             const displayName = blindMode ? `Candidate #${cand.display_rank || idx + 1}` : cand.candidate_name;
 
             return (
-              <div key={cand.candidate_id} style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: '1.25rem' }}>
+              <div key={cand.candidate_id} style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: '1.25rem' }}>
                 
                 {/* Column Candidate Card Header */}
                 <div style={{ height: '3rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem', marginBottom: '1.25rem' }}>
                   <span style={{ fontSize: '0.7rem', color: 'var(--accent-cyan)', fontWeight: 700 }}>RANK #{idx + 1}</span>
-                  <h3 style={{ fontSize: '1rem', fontWeight: 800, color: '#fff', margin: '2px 0 0 0', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                  <h3 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-main)', margin: '2px 0 0 0', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
                     {displayName}
                   </h3>
                 </div>

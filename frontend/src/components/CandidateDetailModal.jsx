@@ -149,7 +149,7 @@ const CandidateDetailModal = ({
         <div className="modal-header" style={{ paddingBottom: '0.85rem' }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
-              <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#fff', margin: 0 }}>
+              <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
                 {displayName}
               </h2>
               <span className="skill-tag matched" style={{ fontSize: '0.8rem', padding: '0.2rem 0.65rem' }}>
@@ -354,7 +354,7 @@ const CandidateDetailModal = ({
                     <h4 style={{ color: 'var(--primary)', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 700, marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
                       <Sparkles size={16} /> AI Match Rationale Summary
                     </h4>
-                    <p style={{ fontSize: '0.95rem', lineHeight: '1.65', color: '#e2e8f0' }}>
+                    <p style={{ fontSize: '0.95rem', lineHeight: '1.65', color: 'var(--text-main)' }}>
                       {explanationData.explanation}
                     </p>
                   </div>
@@ -366,7 +366,7 @@ const CandidateDetailModal = ({
                       </h4>
                       <ul style={{ listStyleType: 'none', padding: 0 }}>
                         {explanationData.key_strengths?.map((str, idx) => (
-                          <li key={idx} style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '0.5rem', paddingLeft: '1.2rem', position: 'relative' }}>
+                          <li key={idx} style={{ fontSize: '0.85rem', color: 'var(--text-body)', marginBottom: '0.5rem', paddingLeft: '1.2rem', position: 'relative' }}>
                             <span style={{ position: 'absolute', left: 0, color: '#34d399' }}>✓</span>
                             {str}
                           </li>
@@ -380,7 +380,7 @@ const CandidateDetailModal = ({
                       </h4>
                       <ul style={{ listStyleType: 'none', padding: 0 }}>
                         {explanationData.potential_gaps?.map((gap, idx) => (
-                          <li key={idx} style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '0.5rem', paddingLeft: '1.2rem', position: 'relative' }}>
+                          <li key={idx} style={{ fontSize: '0.85rem', color: 'var(--text-body)', marginBottom: '0.5rem', paddingLeft: '1.2rem', position: 'relative' }}>
                             <span style={{ position: 'absolute', left: 0, color: '#f87171' }}>•</span>
                             {gap}
                           </li>
@@ -398,8 +398,8 @@ const CandidateDetailModal = ({
           {/* TAB 2: INTERVIEW QUESTIONS & RUBRICS */}
           {activeTab === 'questions' && (
             <div>
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
-                Hiring manager interview scorecard with 1-5 evaluation rubrics, expected answers, and green/red flags:
+              <p style={{ fontSize: '0.88rem', color: 'var(--text-body)', marginBottom: '1.25rem', lineHeight: '1.5' }}>
+                Hiring manager interview scorecard with evaluation rubrics, key signals, and green/red flags:
               </p>
 
               {loadingQs ? (
@@ -411,44 +411,44 @@ const CandidateDetailModal = ({
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                   {questionsData.questions.map((q, idx) => (
                     <div key={idx} className="question-card">
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.6rem' }}>
                         <span className="question-cat">Q{idx + 1} • {q.category}</span>
                         <button
                           className="btn-secondary"
-                          style={{ padding: '0.25rem 0.6rem', fontSize: '0.75rem' }}
+                          style={{ padding: '0.3rem 0.75rem', fontSize: '0.78rem' }}
                           onClick={() => handleCopyQuestion(q.question, idx)}
                         >
-                          {copiedIdx === idx ? <Check size={12} color="#10b981" /> : <Copy size={12} />}
+                          {copiedIdx === idx ? <Check size={13} color="#10b981" /> : <Copy size={13} />}
                           <span>{copiedIdx === idx ? 'Copied' : 'Copy Question'}</span>
                         </button>
                       </div>
 
-                      <p className="question-text" style={{ fontSize: '0.95rem', fontWeight: 700, color: '#fff' }}>"{q.question}"</p>
-                      <p className="question-rationale" style={{ fontSize: '0.8rem', color: 'var(--text-dim)', marginBottom: '0.75rem' }}>
-                        <strong>Rationale:</strong> {q.rationale}
+                      <p className="question-text">"{q.question}"</p>
+                      <p className="question-rationale">
+                        <strong style={{ color: 'var(--text-main)' }}>Rationale:</strong> {q.rationale}
                       </p>
 
                       {/* Expected Answer & Flags */}
                       {q.expected_answer && (
-                        <div style={{ background: 'rgba(255, 255, 255, 0.02)', border: '1px solid var(--border-color)', borderRadius: '6px', padding: '0.75rem', marginTop: '0.5rem' }}>
-                          <div style={{ fontSize: '0.78rem', color: 'var(--accent-cyan)', fontWeight: 700, marginBottom: '0.25rem' }}>
-                            Expected Key Technical Signals:
+                        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '0.85rem', marginTop: '0.75rem' }}>
+                          <div style={{ fontSize: '0.78rem', color: 'var(--accent-cyan)', fontWeight: 700, marginBottom: '0.35rem', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                            <Sparkles size={13} /> Expected Key Technical Signals:
                           </div>
-                          <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0 }}>{q.expected_answer}</p>
+                          <p style={{ fontSize: '0.82rem', color: 'var(--text-body)', margin: 0, lineHeight: '1.5' }}>{q.expected_answer}</p>
                           
-                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginTop: '0.65rem' }}>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginTop: '0.75rem' }}>
                             {q.green_flags?.length > 0 && (
-                              <div>
-                                <span style={{ color: '#34d399', fontSize: '0.72rem', fontWeight: 700 }}>🟢 Green Flags (Look for):</span>
-                                <ul style={{ margin: '2px 0 0 0', paddingLeft: '1rem', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                              <div style={{ background: 'rgba(16, 185, 129, 0.05)', padding: '0.5rem', borderRadius: '6px', border: '1px solid rgba(16, 185, 129, 0.15)' }}>
+                                <span style={{ color: '#10b981', fontSize: '0.75rem', fontWeight: 700 }}>🟢 Green Flags (Look for):</span>
+                                <ul style={{ margin: '4px 0 0 0', paddingLeft: '1.1rem', fontSize: '0.78rem', color: 'var(--text-body)', lineHeight: '1.4' }}>
                                   {q.green_flags.map((g, gIdx) => <li key={gIdx}>{g}</li>)}
                                 </ul>
                               </div>
                             )}
                             {q.red_flags?.length > 0 && (
-                              <div>
-                                <span style={{ color: '#f87171', fontSize: '0.72rem', fontWeight: 700 }}>🔴 Red Flags (Be cautious of):</span>
-                                <ul style={{ margin: '2px 0 0 0', paddingLeft: '1rem', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                              <div style={{ background: 'rgba(244, 63, 94, 0.05)', padding: '0.5rem', borderRadius: '6px', border: '1px solid rgba(244, 63, 94, 0.15)' }}>
+                                <span style={{ color: '#f43f5e', fontSize: '0.75rem', fontWeight: 700 }}>🔴 Red Flags (Be cautious of):</span>
+                                <ul style={{ margin: '4px 0 0 0', paddingLeft: '1.1rem', fontSize: '0.78rem', color: 'var(--text-body)', lineHeight: '1.4' }}>
                                   {q.red_flags.map((r, rIdx) => <li key={rIdx}>{r}</li>)}
                                 </ul>
                               </div>
@@ -555,7 +555,7 @@ const CandidateDetailModal = ({
                         <div style={{ fontSize: '0.72rem', color: 'var(--accent-cyan)', fontWeight: 800, textTransform: 'uppercase' }}>
                           {phase.days}
                         </div>
-                        <h4 style={{ fontSize: '0.9rem', fontWeight: 800, color: '#fff', margin: '4px 0 8px 0' }}>
+                        <h4 style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--text-main)', margin: '4px 0 8px 0' }}>
                           {phase.title}
                         </h4>
                         <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '0.75rem', fontStyle: 'italic' }}>

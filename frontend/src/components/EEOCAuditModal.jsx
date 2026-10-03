@@ -29,7 +29,7 @@ const EEOCAuditModal = ({ onClose, totalEvaluated = 0, jobTitle = 'Target Role' 
               <ShieldCheck size={24} color="#10b981" />
             </div>
             <div>
-              <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#fff', margin: 0 }}>
+              <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
                 EEOC Fair-Hiring & Blind Scoring Compliance Certificate
               </h2>
               <span style={{ fontSize: '0.78rem', color: 'var(--accent-emerald)', fontWeight: 600 }}>

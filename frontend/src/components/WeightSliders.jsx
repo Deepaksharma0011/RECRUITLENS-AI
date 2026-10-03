@@ -34,7 +34,7 @@ const WeightSliders = ({
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <Sliders size={18} color="var(--accent-purple)" />
-          <h3 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#fff', margin: 0 }}>
+          <h3 style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-main)', margin: 0 }}>
             Dynamic Scoring & Weighting Engine
           </h3>
         </div>
@@ -63,7 +63,7 @@ const WeightSliders = ({
         <div>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', marginBottom: '0.4rem', fontWeight: 600 }}>
             <span style={{ color: 'var(--accent-purple)' }}>Semantic AI Embeddings</span>
-            <span style={{ color: '#fff', fontWeight: 700 }}>{semanticWeight}%</span>
+            <span style={{ color: 'var(--text-main)', fontWeight: 700 }}>{semanticWeight}%</span>
           </div>
           <input
             type="range"
@@ -87,7 +87,7 @@ const WeightSliders = ({
         <div>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', marginBottom: '0.4rem', fontWeight: 600 }}>
             <span style={{ color: 'var(--accent-cyan)' }}>Required Skill Match</span>
-            <span style={{ color: '#fff', fontWeight: 700 }}>{skillWeight}%</span>
+            <span style={{ color: 'var(--text-main)', fontWeight: 700 }}>{skillWeight}%</span>
           </div>
           <input
             type="range"
@@ -111,7 +111,7 @@ const WeightSliders = ({
         <div>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', marginBottom: '0.4rem', fontWeight: 600 }}>
             <span style={{ color: 'var(--accent-emerald)' }}>Min Match Cutoff</span>
-            <span style={{ color: '#fff', fontWeight: 700 }}>{minScoreFilter}%</span>
+            <span style={{ color: 'var(--text-main)', fontWeight: 700 }}>{minScoreFilter}%</span>
           </div>
           <input
             type="range"

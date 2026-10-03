@@ -181,7 +181,7 @@ const ResumeSplitViewer = ({ candidate, jdSkills = [], onClose, blindMode }) => 
         <div className="modal-header" style={{ paddingBottom: '0.85rem' }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#fff', margin: 0 }}>
+              <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
                 Interactive Document Viewer: {displayName}
               </h2>
               <span className="skill-tag matched" style={{ fontSize: '0.8rem', padding: '0.2rem 0.65rem' }}>
