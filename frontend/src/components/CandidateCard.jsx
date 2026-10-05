@@ -170,13 +170,22 @@ const CandidateCard = ({
                 </div>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginTop: '3px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginTop: '3px', flexWrap: 'wrap' }}>
                 <p className="cand-meta">
                   {blindMode ? 'Demographics Redacted' : `File: ${candidate.filename}`} • {(candidate.semantic_similarity * 100).toFixed(0)}% sim
                 </p>
                 {candidate.experience_years > 0 && (
                   <span style={{ fontSize: '0.72rem', color: 'var(--accent-cyan)', display: 'flex', alignItems: 'center', gap: '3px', fontWeight: 600 }}>
                     <Briefcase size={11} /> {candidate.experience_years}y exp
+                  </span>
+                )}
+                {candidate.adversarial_safe !== false ? (
+                  <span style={{ fontSize: '0.68rem', color: '#10b981', background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.25)', padding: '1px 6px', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '2px', fontWeight: 700 }} title="Protected by adversarial prompt injection & white-text defense">
+                    <ShieldCheck size={11} /> Prompt Guard Safe
+                  </span>
+                ) : (
+                  <span style={{ fontSize: '0.68rem', color: '#f43f5e', background: 'rgba(244, 63, 94, 0.12)', border: '1px solid rgba(244, 63, 94, 0.3)', padding: '1px 6px', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '2px', fontWeight: 700 }} title="Adversarial prompt injection neutralized">
+                    <AlertTriangle size={11} /> Injection Guarded
                   </span>
                 )}
               </div>

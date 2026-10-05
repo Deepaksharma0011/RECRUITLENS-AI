@@ -7,7 +7,8 @@ from app.models.schemas import (
     CandidateParsedInfo, CandidateScoreResult,
     EvaluationResultsResponse, CandidateExplanationResponse,
     CandidateQuestionsResponse, CandidateEmailsResponse,
-    OnboardingPlanResponse
+    OnboardingPlanResponse, JDOptimizeRequest, JDOptimizeResponse,
+    WhatIfRequest, WhatIfResponse
 )
 from app.parsing.pdf_parser import extract_text_from_pdf
 from app.parsing.docx_parser import extract_text_from_docx
@@ -284,6 +285,126 @@ async def get_results():
         total_candidates=len(candidate_results),
         jd_skills=jd_info.get("required_skills", []),
         candidates=candidate_results
+    )
+
+@router.post("/optimize-jd", response_model=JDOptimizeResponse)
+async def optimize_job_description(payload: JDOptimizeRequest):
+    """Scan JD for exclusionary bias, calculate inclusivity score, and return an optimized rewrite."""
+    from app.llm.jd_optimizer import scan_and_optimize_jd
+    result = scan_and_optimize_jd(payload.jd_text, payload.job_title or "Target Position")
+    return JDOptimizeResponse(**result)
+
+@router.get("/compensation-benchmark/{candidate_id}")
+async def get_candidate_compensation_benchmark(candidate_id: str):
+    """Calculate market salary percentiles and budget fit for candidate."""
+    candidate_eval = session_store.get_candidate_score(candidate_id)
+    if not candidate_eval:
+        if session_store.resumes and session_store.jd_info:
+            resumes_list = list(session_store.resumes.values())
+            ranked = rank_candidates(resumes_list, session_store.jd_info)
+            session_store.set_scores(ranked)
+            candidate_eval = session_store.get_candidate_score(candidate_id)
+
+    if not candidate_eval:
+        raise HTTPException(status_code=404, detail="Candidate not found.")
+
+    candidate_info = session_store.get_resume(candidate_id) or {}
+    jd_info = session_store.jd_info or {}
+    
+    from app.scoring.compensation_estimator import estimate_candidate_compensation
+    return estimate_candidate_compensation(candidate_eval, candidate_info, jd_info)
+
+@router.post("/generate-offer/{candidate_id}")
+async def generate_offer_letter(candidate_id: str, payload: Dict[str, Any] = Body(default={})):
+    """Generate formal customized job offer letter."""
+    candidate_eval = session_store.get_candidate_score(candidate_id)
+    if not candidate_eval:
+        if session_store.resumes and session_store.jd_info:
+            resumes_list = list(session_store.resumes.values())
+            ranked = rank_candidates(resumes_list, session_store.jd_info)
+            session_store.set_scores(ranked)
+            candidate_eval = session_store.get_candidate_score(candidate_id)
+
+    if not candidate_eval:
+        raise HTTPException(status_code=404, detail="Candidate not found.")
+
+    candidate_info = session_store.get_resume(candidate_id) or {}
+    jd_info = session_store.jd_info or {}
+    
+    from app.llm.offer_letter_generator import generate_formal_offer_letter
+    return generate_formal_offer_letter(candidate_eval, candidate_info, jd_info, payload)
+
+@router.get("/radar-metrics/{candidate_id}")
+async def get_candidate_radar_metrics(candidate_id: str):
+    """Compute 6-axis competency radar and team complementarity."""
+    candidate_eval = session_store.get_candidate_score(candidate_id)
+    if not candidate_eval:
+        if session_store.resumes and session_store.jd_info:
+            resumes_list = list(session_store.resumes.values())
+            ranked = rank_candidates(resumes_list, session_store.jd_info)
+            session_store.set_scores(ranked)
+            candidate_eval = session_store.get_candidate_score(candidate_id)
+
+    if not candidate_eval:
+        raise HTTPException(status_code=404, detail="Candidate not found.")
+
+    candidate_info = session_store.get_resume(candidate_id) or {}
+    jd_info = session_store.jd_info or {}
+    
+    from app.scoring.radar_metrics import compute_candidate_radar_metrics
+    return compute_candidate_radar_metrics(candidate_eval, candidate_info, jd_info)
+
+@router.post("/what-if-simulate/{candidate_id}", response_model=WhatIfResponse)
+async def simulate_candidate_upskilling(candidate_id: str, payload: WhatIfRequest):
+    """Simulate candidate match score jump if specific missing skills are acquired."""
+    candidate_eval = session_store.get_candidate_score(candidate_id)
+    if not candidate_eval:
+        if session_store.resumes and session_store.jd_info:
+            resumes_list = list(session_store.resumes.values())
+            ranked = rank_candidates(resumes_list, session_store.jd_info)
+            session_store.set_scores(ranked)
+            candidate_eval = session_store.get_candidate_score(candidate_id)
+
+    if not candidate_eval:
+        raise HTTPException(status_code=404, detail="Candidate not found.")
+
+    orig_score = float(candidate_eval.get("score", 60.0))
+    orig_matched = list(candidate_eval.get("matched_skills", []))
+    orig_missing = list(candidate_eval.get("missing_skills", []))
+    
+    # Calculate simulated matched skills
+    sim_matched = list(orig_matched)
+    sim_missing = []
+    
+    for m in orig_missing:
+        if any(add.lower() in m.lower() or m.lower() in add.lower() for add in payload.added_skills):
+            if m not in sim_matched:
+                sim_matched.append(m)
+        else:
+            sim_missing.append(m)
+            
+    # Calculate simulated score jump
+    skill_pct = (len(sim_matched) / max(1, len(sim_matched) + len(sim_missing))) * 100.0
+    sem_pct = float(candidate_eval.get("semantic_similarity", 0.6)) * 100.0
+    # Add modest semantic boost when skills are acquired
+    sem_pct_boosted = min(98.0, sem_pct + (len(payload.added_skills) * 3.5))
+    
+    sim_score = round((sem_pct_boosted * 0.6) + (skill_pct * 0.4), 1)
+    sim_score = max(orig_score, min(99.0, sim_score))
+    delta = round(sim_score - orig_score, 1)
+    
+    ramp_up_weeks = max(2, len(payload.added_skills) * 3)
+    verdict = "🚀 High ROI Upskill Candidate — Fast 85%+ Match" if sim_score >= 80 and delta >= 10 else "Solid Potential with Targeted Training"
+
+    return WhatIfResponse(
+        candidate_id=candidate_id,
+        original_score=orig_score,
+        simulated_score=sim_score,
+        score_delta=delta,
+        simulated_matched_skills=sim_matched,
+        remaining_missing_skills=sim_missing,
+        roi_verdict=verdict,
+        estimated_ramp_up_weeks=ramp_up_weeks
     )
 
 @router.post("/reset")

@@ -109,3 +109,30 @@ class OnboardingPlanResponse(BaseModel):
     skill_gap_focus: List[str] = []
     phases: List[Dict[str, Any]] = []
     recommended_resources: List[Dict[str, Any]] = []
+
+class JDOptimizeRequest(BaseModel):
+    jd_text: str
+    job_title: Optional[str] = "Target Position"
+
+class JDOptimizeResponse(BaseModel):
+    job_title: str
+    inclusivity_score: int
+    bias_level: str
+    flagged_words: List[Dict[str, Any]]
+    estimated_applicant_boost_pct: int
+    key_improvements: List[str]
+    optimized_jd: str
+
+class WhatIfRequest(BaseModel):
+    added_skills: List[str] = []
+    adjusted_experience: Optional[float] = None
+
+class WhatIfResponse(BaseModel):
+    candidate_id: str
+    original_score: float
+    simulated_score: float
+    score_delta: float
+    simulated_matched_skills: List[str]
+    remaining_missing_skills: List[str]
+    roi_verdict: str
+    estimated_ramp_up_weeks: int

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Sparkles, Search, Loader2, CheckCircle2, ChevronRight, Zap } from 'lucide-react';
-import { suggestJobTitles, searchJD } from '../services/api';
+import { Sparkles, Search, Loader2, CheckCircle2, ChevronRight, Zap, ShieldCheck, Wand2, AlertTriangle, X } from 'lucide-react';
+import { suggestJobTitles, searchJD, optimizeJD } from '../services/api';
 
 // Instant Client-Side 120+ Job Taxonomy for 0ms Zero-Latency Guessing
 const INSTANT_JOB_DATABASE = [
@@ -98,36 +98,56 @@ const INSTANT_JOB_DATABASE = [
   "Senior Product Designer",
   "UX Researcher",
   "Visual UI Designer",
-  "Design Systems Lead"
+
+  // Marketing, Social Media & Sales
+  "Social Media Executive",
+  "Social Media Manager",
+  "Content Strategist",
+  "Digital Marketing Specialist",
+  "SEO Specialist",
+  "Growth Marketing Manager",
+  "Copywriter & Content Lead",
+  "Account Executive",
+  "Business Development Manager (BDM)",
+  "Sales Representative",
+  "HR Generalist",
+  "Talent Acquisition Specialist",
+  "Financial Analyst"
 ];
 
 const POPULAR_QUICK_PICKS = [
+  "Social Media Executive",
+  "Full Stack Developer",
   "Data Analyst",
-  "Senior Full Stack Engineer",
-  "Python Developer",
-  "Frontend React Developer",
-  "DevOps Architect",
-  "Machine Learning Engineer"
+  "Machine Learning Engineer",
+  "UI/UX Designer",
+  "DevOps Engineer",
+  "Technical Product Manager"
 ];
 
-const JDInput = ({ jdText, setJdText, jobTitle, setJobTitle, onParsedJD }) => {
+const JDInput = ({ jdText, setJdText, jobTitle, setJobTitle }) => {
   const [query, setQuery] = useState(jobTitle || '');
-  const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const [isSearching, setIsSearching] = useState(false);
-  const [statusMsg, setStatusMsg] = useState('');
-  const [errorMsg, setErrorMsg] = useState('');
+  const [statusMsg, setStatusMsg] = useState(null);
+  const [errorMsg, setErrorMsg] = useState(null);
+
+  // Inclusive Optimizer State
+  const [isOptimizing, setIsOptimizing] = useState(false);
+  const [optimizationResult, setOptimizationResult] = useState(null);
+  const [showOptimizerModal, setShowOptimizerModal] = useState(false);
+
   const wrapperRef = useRef(null);
 
-  // Sync external jobTitle changes
-  useEffect(() => {
-    if (jobTitle && jobTitle !== query) {
-      setQuery(jobTitle);
-    }
-  }, [jobTitle]);
+  // Filter Client-Side Instant Suggestions
+  const suggestions = useMemo(() => {
+    if (!query.trim() || query.length < 1) return [];
+    const qLower = query.toLowerCase().trim();
+    return INSTANT_JOB_DATABASE.filter(role => role.toLowerCase().includes(qLower)).slice(0, 8);
+  }, [query]);
 
-  // Click outside listener to dismiss dropdown
+  // Click outside listener
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
@@ -138,82 +158,67 @@ const JDInput = ({ jdText, setJdText, jobTitle, setJobTitle, onParsedJD }) => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Instant Real-Time Search & Guessing Algorithm (0ms instant response on 1+ characters)
-  const computeSuggestions = (inputVal) => {
-    if (!inputVal || !inputVal.trim()) {
-      return [];
-    }
+  const handleSelectJobTitle = async (title) => {
+    setQuery(title);
+    setJobTitle(title);
+    setShowSuggestions(false);
+    setStatusMsg(`Loading AI-generated description for "${title}"...`);
+    setErrorMsg(null);
+    setIsSearching(true);
 
-    const clean = inputVal.trim().toLowerCase();
-    const words = clean.split(/\s+/).filter(Boolean);
-
-    // Filter from instant database
-    const directMatches = [];
-    const prefixMatches = [];
-    const wordMatches = [];
-
-    for (const title of INSTANT_JOB_DATABASE) {
-      const tLower = title.toLowerCase();
-      if (tLower === clean) {
-        directMatches.push(title);
-      } else if (tLower.startsWith(clean)) {
-        prefixMatches.push(title);
-      } else if (words.every(w => tLower.includes(w))) {
-        wordMatches.push(title);
-      } else if (words.some(w => w.length >= 2 && tLower.includes(w))) {
-        wordMatches.push(title);
+    try {
+      const res = await searchJD(title);
+      if (res && res.jd_text) {
+        setJdText(res.jd_text);
+        setStatusMsg(`✓ Ready: Loaded benchmark job requirements for "${title}".`);
       }
-    }
-
-    const combined = Array.from(new Set([...directMatches, ...prefixMatches, ...wordMatches]));
-
-    // If typing custom title not in DB, add smart expanded variations
-    if (combined.length < 3 && clean.length >= 2) {
-      const titleCase = inputVal.trim().replace(/\b\w/g, l => l.toUpperCase());
-      const additions = [
-        titleCase,
-        `Senior ${titleCase}`,
-        `Lead ${titleCase} Engineer`,
-        `${titleCase} Specialist`
-      ];
-      additions.forEach(a => {
-        if (!combined.includes(a)) combined.push(a);
-      });
-    }
-
-    return combined.slice(0, 8);
-  };
-
-  const handleInputChange = (e) => {
-    const val = e.target.value;
-    setQuery(val);
-    setJobTitle(val);
-    setErrorMsg('');
-    setSelectedIndex(-1);
-
-    if (val.trim().length >= 1) {
-      // 1. Instant 0ms Local Guessing
-      const instantMatches = computeSuggestions(val);
-      setSuggestions(instantMatches);
-      setShowSuggestions(true);
-
-      // 2. Also query backend API asynchronously for deep suggestions
-      suggestJobTitles(val)
-        .then(res => {
-          if (res && res.suggestions && res.suggestions.length > 0) {
-            setSuggestions(prev => Array.from(new Set([...prev, ...res.suggestions])).slice(0, 8));
-          }
-        })
-        .catch(() => {});
-    } else {
-      setSuggestions([]);
-      setShowSuggestions(false);
+    } catch (e) {
+      console.error(e);
+      setErrorMsg("Could not auto-generate JD text. Please paste manually.");
+    } finally {
+      setIsSearching(false);
+      setTimeout(() => setStatusMsg(null), 4000);
     }
   };
 
-  // Keyboard Navigation (Arrow Up, Arrow Down, Enter, Escape)
+  const handleScanAndOptimizeJD = async () => {
+    if (!jdText.trim()) {
+      setErrorMsg("Please enter or paste a Job Description first to analyze bias.");
+      setTimeout(() => setErrorMsg(null), 3000);
+      return;
+    }
+
+    setIsOptimizing(true);
+    setErrorMsg(null);
+    try {
+      const result = await optimizeJD(jdText, jobTitle || query || "Target Position");
+      setOptimizationResult(result);
+      setShowOptimizerModal(true);
+    } catch (e) {
+      console.error(e);
+      setErrorMsg("Failed to scan Job Description for bias. Please try again.");
+    } finally {
+      setIsOptimizing(false);
+    }
+  };
+
+  const handleApplyOptimizedJD = () => {
+    if (optimizationResult?.optimized_jd) {
+      setJdText(optimizationResult.optimized_jd);
+      setShowOptimizerModal(false);
+      setStatusMsg("✓ Applied EEOC-Optimized Inclusive Job Description!");
+      setTimeout(() => setStatusMsg(null), 4000);
+    }
+  };
+
   const handleKeyDown = (e) => {
-    if (!showSuggestions || suggestions.length === 0) return;
+    if (!showSuggestions || suggestions.length === 0) {
+      if (e.key === 'Enter' && query.trim()) {
+        e.preventDefault();
+        handleSelectJobTitle(query.trim());
+      }
+      return;
+    }
 
     if (e.key === 'ArrowDown') {
       e.preventDefault();
@@ -225,98 +230,61 @@ const JDInput = ({ jdText, setJdText, jobTitle, setJobTitle, onParsedJD }) => {
       e.preventDefault();
       if (selectedIndex >= 0 && selectedIndex < suggestions.length) {
         handleSelectJobTitle(suggestions[selectedIndex]);
-      } else if (suggestions.length > 0) {
-        handleSelectJobTitle(suggestions[0]);
+      } else if (query.trim()) {
+        handleSelectJobTitle(query.trim());
       }
     } else if (e.key === 'Escape') {
       setShowSuggestions(false);
     }
   };
 
-  const handleSelectJobTitle = async (title) => {
-    setQuery(title);
-    setJobTitle(title);
-    setShowSuggestions(false);
-    setIsSearching(true);
-    setStatusMsg(`Auto-generating comprehensive Job Description for "${title}"...`);
-    setErrorMsg('');
-
-    try {
-      const res = await searchJD(title);
-      if (res && res.jd_text) {
-        setJdText(res.jd_text);
-        if (onParsedJD) {
-          onParsedJD(res);
-        }
-        setStatusMsg(`✓ Professional Job Description loaded for ${title}!`);
-      }
-    } catch (err) {
-      console.error('Search JD error:', err);
-      setErrorMsg('Failed to generate JD. Please enter details manually.');
-    } finally {
-      setIsSearching(false);
-      setTimeout(() => setStatusMsg(''), 4000);
-    }
-  };
-
-  // Highlight matched query letters inside suggestion
-  const renderHighlightedTitle = (title, matchQuery) => {
-    if (!matchQuery || !matchQuery.trim()) return title;
-    const parts = title.split(new RegExp(`(${matchQuery.trim()})`, 'gi'));
+  const renderHighlightedTitle = (title, matchText) => {
+    if (!matchText) return title;
+    const index = title.toLowerCase().indexOf(matchText.toLowerCase());
+    if (index === -1) return title;
     return (
-      <span>
-        {parts.map((part, i) =>
-          part.toLowerCase() === matchQuery.trim().toLowerCase() ? (
-            <span key={i} style={{ color: 'var(--accent-cyan)', fontWeight: 800, textDecoration: 'underline' }}>
-              {part}
-            </span>
-          ) : (
-            <span key={i}>{part}</span>
-          )
-        )}
-      </span>
+      <>
+        {title.substring(0, index)}
+        <span style={{ color: 'var(--accent-cyan)', fontWeight: 800, textDecoration: 'underline' }}>
+          {title.substring(index, index + matchText.length)}
+        </span>
+        {title.substring(index + matchText.length)}
+      </>
     );
   };
 
   return (
-    <div className="card-glass jd-input-container" style={{ padding: '1.25rem', marginBottom: '1.5rem', background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-lg)' }}>
-      
-      {/* Title & Instant Search Input */}
-      <div style={{ position: 'relative', marginBottom: '0.85rem' }} ref={wrapperRef}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-          <label style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <Sparkles size={16} color="var(--accent-cyan)" />
-            Target Job Title & Instant AI Suggestions
-          </label>
-          <span style={{ fontSize: '0.72rem', color: 'var(--accent-cyan)', fontWeight: 600 }}>
-            ⚡ Live Auto-Guess Active
-          </span>
-        </div>
-
-        <div style={{ position: 'relative' }}>
+    <div className="card" style={{ padding: '1.25rem', position: 'relative' }} ref={wrapperRef}>
+      {/* Title Search Bar with Instant Suggestions */}
+      <div style={{ position: 'relative', marginBottom: '0.75rem' }}>
+        <label style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
+          <span>Job Title / Target Position:</span>
+          <span style={{ fontSize: '0.7rem', color: 'var(--accent-cyan)', fontWeight: 600 }}>⚡ 120+ Roles Auto-Complete</span>
+        </label>
+        
+        <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
           <input
             type="text"
-            className="search-input"
             value={query}
-            onChange={handleInputChange}
-            onKeyDown={handleKeyDown}
-            onFocus={() => {
-              if (query.trim().length >= 1) {
-                setSuggestions(computeSuggestions(query));
-                setShowSuggestions(true);
-              }
+            onChange={(e) => {
+              setQuery(e.target.value);
+              setJobTitle(e.target.value);
+              setShowSuggestions(true);
+              setSelectedIndex(-1);
             }}
-            placeholder="Type any role (e.g. Data, Python, React, DevOps, AI, Product)..."
+            onFocus={() => { if (query.trim()) setShowSuggestions(true); }}
+            onKeyDown={handleKeyDown}
+            placeholder="Type role name (e.g. Social Media Executive, React Dev, Data Analyst)..."
             style={{
               width: '100%',
-              padding: '0.65rem 2.2rem 0.65rem 2.2rem',
-              borderRadius: 'var(--radius-md, 8px)',
-              border: showSuggestions ? '1px solid var(--accent-cyan)' : '1px solid var(--border-color)',
+              padding: '0.65rem 2.5rem 0.65rem 2.2rem',
               background: 'var(--bg-dark)',
+              border: '1px solid var(--border-color)',
+              borderRadius: 'var(--radius-md, 8px)',
               color: 'var(--text-main)',
               fontSize: '0.88rem',
               fontWeight: 600,
-              boxShadow: showSuggestions ? '0 0 15px rgba(6, 182, 212, 0.25)' : 'none',
+              outline: 'none',
               transition: 'border-color 0.2s ease, box-shadow 0.2s ease'
             }}
           />
@@ -368,8 +336,8 @@ const JDInput = ({ jdText, setJdText, jobTitle, setJobTitle, onParsedJD }) => {
                     cursor: 'pointer',
                     fontSize: '0.86rem',
                     fontWeight: 600,
-                    color: isSelected ? '#fff' : 'var(--text-main)',
-                    background: isSelected ? 'linear-gradient(135deg, rgba(6, 182, 212, 0.25), rgba(99, 102, 241, 0.25))' : 'transparent',
+                    color: isSelected ? 'var(--primary)' : 'var(--text-main)',
+                    background: isSelected ? 'linear-gradient(135deg, rgba(6, 182, 212, 0.15), rgba(99, 102, 241, 0.15))' : 'transparent',
                     border: isSelected ? '1px solid rgba(6, 182, 212, 0.4)' : '1px solid transparent',
                     display: 'flex',
                     alignItems: 'center',
@@ -419,23 +387,50 @@ const JDInput = ({ jdText, setJdText, jobTitle, setJobTitle, onParsedJD }) => {
 
       {/* Status or Error Notifications */}
       {statusMsg && (
-        <div style={{ background: 'rgba(16, 185, 129, 0.12)', border: '1px solid rgba(16, 185, 129, 0.3)', color: '#34d399', fontSize: '0.78rem', padding: '0.4rem 0.75rem', borderRadius: '6px', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+        <div style={{ background: 'rgba(16, 185, 129, 0.12)', border: '1px solid rgba(16, 185, 129, 0.3)', color: '#10b981', fontSize: '0.78rem', padding: '0.4rem 0.75rem', borderRadius: '6px', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
           <CheckCircle2 size={14} />
           <span>{statusMsg}</span>
         </div>
       )}
 
       {errorMsg && (
-        <div style={{ background: 'rgba(244, 63, 94, 0.12)', border: '1px solid rgba(244, 63, 94, 0.3)', color: '#f87171', fontSize: '0.78rem', padding: '0.4rem 0.75rem', borderRadius: '6px', marginBottom: '0.75rem' }}>
+        <div style={{ background: 'rgba(244, 63, 94, 0.12)', border: '1px solid rgba(244, 63, 94, 0.3)', color: '#f43f5e', fontSize: '0.78rem', padding: '0.4rem 0.75rem', borderRadius: '6px', marginBottom: '0.75rem' }}>
           {errorMsg}
         </div>
       )}
 
       {/* Detailed Job Description Text Area */}
       <div>
-        <label style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: '0.35rem' }}>
-          Job Description Content & Technical Requirements:
-        </label>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+          <label style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-muted)', margin: 0 }}>
+            Job Description Content & Technical Requirements:
+          </label>
+          
+          <button
+            type="button"
+            onClick={handleScanAndOptimizeJD}
+            disabled={isOptimizing}
+            style={{
+              background: 'rgba(99, 102, 241, 0.12)',
+              border: '1px solid rgba(99, 102, 241, 0.35)',
+              color: 'var(--primary)',
+              fontSize: '0.75rem',
+              fontWeight: 700,
+              padding: '3px 10px',
+              borderRadius: '12px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '5px',
+              transition: 'all 0.15s ease'
+            }}
+            title="Scan Job Description for gender bias, aggressive words, and get an inclusive rewrite"
+          >
+            {isOptimizing ? <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} /> : <Wand2 size={12} />}
+            <span>✨ Scan & Optimize JD Bias</span>
+          </button>
+        </div>
+
         <textarea
           rows={7}
           value={jdText}
@@ -455,6 +450,120 @@ const JDInput = ({ jdText, setJdText, jobTitle, setJobTitle, onParsedJD }) => {
           }}
         />
       </div>
+
+      {/* Inclusive JD Optimizer Modal */}
+      {showOptimizerModal && optimizationResult && (
+        <div className="modal-overlay" onClick={() => setShowOptimizerModal(false)}>
+          <div
+            className="modal-content"
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: '780px', width: '92%', maxHeight: '88vh', display: 'flex', flexDirection: 'column' }}
+          >
+            <div className="modal-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                <div style={{ background: 'rgba(99, 102, 241, 0.15)', padding: '0.5rem', borderRadius: '50%' }}>
+                  <ShieldCheck size={22} color="var(--primary)" />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
+                    EEOC Inclusive Language & Bias Audit
+                  </h3>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                    Audited for: {optimizationResult.job_title}
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowOptimizerModal(false)}
+                style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-color)', color: 'var(--text-muted)', padding: '0.4rem', borderRadius: '50%', cursor: 'pointer' }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="modal-body" style={{ flex: 1, overflowY: 'auto' }}>
+              {/* Score Badges Bar */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginBottom: '1.25rem' }}>
+                <div style={{ background: 'var(--bg-dark)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-color)', textAlign: 'center' }}>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>Inclusivity Index</div>
+                  <div style={{ fontSize: '1.6rem', fontWeight: 800, color: optimizationResult.inclusivity_score >= 80 ? '#10b981' : '#f59e0b', margin: '4px 0' }}>
+                    {optimizationResult.inclusivity_score}/100
+                  </div>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Bias Level: {optimizationResult.bias_level}</span>
+                </div>
+
+                <div style={{ background: 'var(--bg-dark)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-color)', textAlign: 'center' }}>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>Applicant Boost</div>
+                  <div style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--accent-cyan)', margin: '4px 0' }}>
+                    +{optimizationResult.estimated_applicant_boost_pct}%
+                  </div>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Diverse Candidate Reach</span>
+                </div>
+
+                <div style={{ background: 'var(--bg-dark)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-color)', textAlign: 'center' }}>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>Flagged Elements</div>
+                  <div style={{ fontSize: '1.6rem', fontWeight: 800, color: optimizationResult.flagged_words.length === 0 ? '#10b981' : '#f43f5e', margin: '4px 0' }}>
+                    {optimizationResult.flagged_words.length}
+                  </div>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Issues Auto-Corrected</span>
+                </div>
+              </div>
+
+              {/* Flagged Words Table */}
+              {optimizationResult.flagged_words.length > 0 && (
+                <div style={{ marginBottom: '1.25rem' }}>
+                  <h4 style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <AlertTriangle size={15} color="#f59e0b" /> Flagged Words & Replacements:
+                  </h4>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    {optimizationResult.flagged_words.map((item, idx) => (
+                      <div key={idx} style={{ background: 'rgba(244, 63, 94, 0.06)', border: '1px solid rgba(244, 63, 94, 0.2)', padding: '0.65rem 0.85rem', borderRadius: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem' }}>
+                        <div>
+                          <strong style={{ color: '#f43f5e' }}>"{item.word}"</strong>
+                          <span style={{ color: 'var(--text-muted)', margin: '0 6px' }}>➔</span>
+                          <strong style={{ color: '#10b981' }}>"{item.suggested_replacement}"</strong>
+                          <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '2px' }}>{item.reason}</div>
+                        </div>
+                        <span style={{ fontSize: '0.7rem', color: 'var(--accent-purple)', background: 'rgba(168, 85, 247, 0.1)', padding: '2px 8px', borderRadius: '10px', fontWeight: 700 }}>
+                          {item.type}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Optimized Preview */}
+              <div>
+                <h4 style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Sparkles size={15} color="var(--primary)" /> Enhanced Inclusive Job Description:
+                </h4>
+                <pre style={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit', fontSize: '0.82rem', lineHeight: '1.6', color: 'var(--text-body)', background: 'var(--bg-dark)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-color)', maxHeight: '220px', overflowY: 'auto' }}>
+                  {optimizationResult.optimized_jd}
+                </pre>
+              </div>
+            </div>
+
+            <div style={{ padding: '0.75rem 1.5rem', background: 'var(--bg-surface)', borderTop: '1px solid var(--border-color)', display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+              <button
+                onClick={() => setShowOptimizerModal(false)}
+                className="btn-secondary"
+                style={{ padding: '0.45rem 1rem', fontSize: '0.82rem' }}
+              >
+                Keep Original
+              </button>
+              <button
+                onClick={handleApplyOptimizedJD}
+                className="btn-primary"
+                style={{ padding: '0.45rem 1.25rem', fontSize: '0.82rem' }}
+              >
+                <CheckCircle2 size={15} />
+                <span>Apply Inclusive Rewrite to JD</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

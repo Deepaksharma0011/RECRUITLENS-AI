@@ -88,7 +88,44 @@ def detect_resume_anomalies(raw_text: str, candidate_data: Dict[str, Any], jd_da
                 })
                 break
 
-    # --- 4. Contact & Verification Health Check ---
+    # --- 4. Prompt Injection & Adversarial AI Defense Check ---
+    PROMPT_INJECTION_PATTERNS = [
+        r'ignore\s+(?:all\s+)?(?:previous|prior)\s+instructions',
+        r'disregard\s+(?:all\s+)?(?:previous|prior)\s+rules',
+        r'system\s*:\s*(?:you\s+are|override|give\s+this\s+candidate)',
+        r'(?:give|assign|rate)\s+(?:this\s+candidate|me)\s+(?:a\s+)?(?:100|99|perfect|top)\s*(?:%|\/100|score|rating)',
+        r'you\s+must\s+rank\s+(?:this\s+candidate|me)\s+(?:first|#1|top)',
+        r'system\s+prompt\s+override',
+        r'bypass\s+(?:screening|ats|filter)',
+        r'developer\s+mode\s+enabled'
+    ]
+    
+    injection_matches = []
+    for pat in PROMPT_INJECTION_PATTERNS:
+        match = re.search(pat, raw_text, re.IGNORECASE)
+        if match:
+            injection_matches.append(match.group(0))
+            
+    zero_width_count = len(re.findall(r'[\u200B-\u200D\uFEFF]', raw_text))
+    
+    if injection_matches:
+        anomalies.append({
+            "type": "prompt_injection",
+            "severity": "high",
+            "title": "🚨 Adversarial Prompt Injection Neutralized",
+            "detail": f"Resume contains hidden prompt override instruction: '{injection_matches[0]}'. Guardrails active.",
+            "icon": "ShieldAlert"
+        })
+    elif zero_width_count > 5:
+        anomalies.append({
+            "type": "hidden_unicode_text",
+            "severity": "medium",
+            "title": "Hidden Zero-Width Unicode Characters",
+            "detail": f"Document contains {zero_width_count} invisible unicode characters designed to manipulate tokenizers.",
+            "icon": "EyeOff"
+        })
+
+    # --- 5. Contact & Verification Health Check ---
     has_email = bool(candidate_data.get("email"))
     has_phone = bool(candidate_data.get("phone"))
     
@@ -102,12 +139,13 @@ def detect_resume_anomalies(raw_text: str, candidate_data: Dict[str, Any], jd_da
         })
 
     # Summary Health Score (100 = Clean, 0 = High Concern)
-    penalty = sum(25 if a["severity"] == "high" else 15 if a["severity"] == "medium" else 5 for a in anomalies)
-    integrity_score = max(50, 100 - penalty)
+    penalty = sum(35 if a["severity"] == "high" else 15 if a["severity"] == "medium" else 5 for a in anomalies)
+    integrity_score = max(30, 100 - penalty)
 
     return {
         "integrity_score": integrity_score,
         "total_anomalies": len(anomalies),
         "anomalies": anomalies,
+        "adversarial_safe": len(injection_matches) == 0 and zero_width_count <= 5,
         "status": "Clean" if len(anomalies) == 0 else "Review Needed" if integrity_score < 80 else "Minor Notes"
     }

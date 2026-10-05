@@ -37,9 +37,9 @@ def generate_score_explanation(
     if matched_skills:
         key_strengths.append(f"Strong practical experience in core requirements: {', '.join(matched_skills[:4])}.")
     if exp_years > 0:
-        key_strengths.append(f"Demonstrated background of {exp_years} years in software engineering.")
+        key_strengths.append(f"Demonstrated background of {exp_years} years relevant to {job_title}.")
     if not key_strengths:
-        key_strengths.append("Foundational technical background and transferable software engineering skills.")
+        key_strengths.append(f"Foundational background and transferable skills applicable to {job_title}.")
 
     potential_gaps = []
     if missing_skills:

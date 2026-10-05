@@ -10,7 +10,7 @@ const Header = ({
   onExportCSV,
   onPrintPDF,
   onOpenEEOCAudit,
-  theme = 'dark',
+  theme = 'light',
   setTheme
 }) => {
   const toggleTheme = () => {

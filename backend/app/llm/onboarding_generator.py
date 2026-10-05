@@ -12,27 +12,27 @@ def generate_onboarding_plan(candidate_eval: Dict[str, Any], candidate_info: Dic
     name = candidate_eval.get("candidate_name", "Candidate")
     matched = candidate_eval.get("matched_skills", [])
     missing = candidate_eval.get("missing_skills", [])
-    job_title = jd_info.get("job_title", "Software Engineer")
-    exp_years = candidate_info.get("experience_years", 0)
+    job_title = jd_info.get("job_title", "Target Position")
+    exp_years = candidate_info.get("experience_years", candidate_eval.get("experience_years", 0))
 
-    # 1. Attempt OpenAI GPT Generation
-    system_prompt = "You are an engineering director building high-performance 30-60-90 day onboarding and upskilling roadmaps for incoming engineers."
+    # 1. Attempt Gemini / OpenAI LLM Generation
+    system_prompt = f"You are a talent development director building high-performance 30-60-90 day onboarding and upskilling roadmaps for an incoming '{job_title}'."
     user_prompt = f"""
 Create a comprehensive, structured 30-60-90 day onboarding & upskilling roadmap for candidate {name} joining as '{job_title}':
 - Candidate Experience: {exp_years} years
-- Strong Core Skills: {', '.join(matched) if matched else 'Solid engineering foundation'}
-- Key Skill Gaps to Ramp-Up: {', '.join(missing) if missing else 'Advanced system architecture'}
+- Strong Core Skills: {', '.join(matched) if matched else f'Solid foundation for {job_title}'}
+- Key Skill Gaps to Ramp-Up: {', '.join(missing) if missing else 'Advanced operational execution'}
 
 Return a JSON object with:
-- "summary": 2-3 sentence strategic onboarding philosophy
+- "summary": 2-3 sentence strategic onboarding philosophy tailored specifically to {job_title}
 - "skill_gap_focus": array of strings (top skills to ramp up)
 - "phases": array of 3 phase objects:
-    1. days: "Days 1–30", title: "Foundation & System Absorption", focus: "...", milestones: [array of 3-4 concrete goals], skill_gap_action: "...", key_deliverable: "..."
-    2. days: "Days 31–60", title: "Autonomous Execution & Gap Mastery", focus: "...", milestones: [array of 3-4 goals], skill_gap_action: "...", key_deliverable: "..."
-    3. days: "Days 61–90", title: "Domain Ownership & Scale", focus: "...", milestones: [array of 3-4 goals], skill_gap_action: "...", key_deliverable: "..."
+    1. days: "Days 1–30", title: "Orientation & Workflow Absorption", focus: "...", milestones: [array of 3-4 concrete goals], skill_gap_action: "...", key_deliverable: "..."
+    2. days: "Days 31–60", title: "Autonomous Execution & Core Ownership", focus: "...", milestones: [array of 3-4 goals], skill_gap_action: "...", key_deliverable: "..."
+    3. days: "Days 61–90", title: "Strategic Impact & High Output", focus: "...", milestones: [array of 3-4 goals], skill_gap_action: "...", key_deliverable: "..."
 - "recommended_resources": array of objects: {{"skill": "...", "type": "...", "title": "...", "recommendation": "..."}}
 
-Return ONLY valid JSON.
+Return ONLY valid raw JSON.
 """
 
     gpt_response = call_llm(user_prompt, system_prompt)

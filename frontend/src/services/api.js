@@ -80,4 +80,32 @@ export const resetSession = async () => {
   return response.data;
 };
 
+export const optimizeJD = async (jdText, jobTitle = 'Target Position') => {
+  const response = await api.post('/optimize-jd', { jd_text: jdText, job_title: jobTitle });
+  return response.data;
+};
+
+export const getCompensationBenchmark = async (candidateId) => {
+  const response = await api.get(`/compensation-benchmark/${candidateId}`);
+  return response.data;
+};
+
+export const generateOfferLetter = async (candidateId, customParams = {}) => {
+  const response = await api.post(`/generate-offer/${candidateId}`, customParams);
+  return response.data;
+};
+
+export const getRadarMetrics = async (candidateId) => {
+  const response = await api.get(`/radar-metrics/${candidateId}`);
+  return response.data;
+};
+
+export const simulateWhatIf = async (candidateId, addedSkills = [], adjustedExperience = null) => {
+  const response = await api.post(`/what-if-simulate/${candidateId}`, {
+    added_skills: addedSkills,
+    adjusted_experience: adjustedExperience
+  });
+  return response.data;
+};
+
 export default api;

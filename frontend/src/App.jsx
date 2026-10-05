@@ -18,7 +18,9 @@ import './App.css';
 
 function App() {
   const [backendConnected, setBackendConnected] = useState(false);
-  const [theme, setTheme] = useState('dark');
+  const [theme, setTheme] = useState(() => {
+    return localStorage.getItem('recruitlens_theme') || 'light';
+  });
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [parsedCandidates, setParsedCandidates] = useState([]);
   const [jdText, setJdText] = useState('');
@@ -59,8 +61,9 @@ function App() {
       .catch(() => setBackendConnected(false));
   }, []);
 
-  // Sync theme class to body
+  // Sync theme class to body and persist preference
   useEffect(() => {
+    localStorage.setItem('recruitlens_theme', theme);
     if (theme === 'light') {
       document.body.classList.add('theme-light');
       document.body.classList.remove('theme-dark');

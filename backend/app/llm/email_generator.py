@@ -13,30 +13,33 @@ def generate_candidate_emails(candidate_eval: Dict[str, Any], candidate_info: Di
     matched = candidate_eval.get("matched_skills", [])
     missing = candidate_eval.get("missing_skills", [])
     score = candidate_eval.get("score", 0)
-    job_title = jd_info.get("job_title", "Software Engineer")
-    exp_years = candidate_info.get("experience_years", 0)
+    job_title = jd_info.get("job_title", "Target Position")
+    exp_years = candidate_info.get("experience_years", candidate_eval.get("experience_years", 0))
 
-    # 1. Attempt OpenAI GPT Generation
-    system_prompt = "You are an executive talent acquisition director writing high-touch, polite, professional recruitment correspondence."
+    # 1. Attempt Gemini / OpenAI LLM Generation
+    system_prompt = f"You are an executive talent acquisition director writing high-touch, polite recruitment emails for a '{job_title}' candidate."
     user_prompt = f"""
 Write 3 personalized email drafts for candidate {name} applying for '{job_title}':
 - Candidate Match Score: {score}/100
-- Strong Matching Skills: {', '.join(matched) if matched else 'Relevant technical experience'}
+- Strong Matching Skills: {', '.join(matched) if matched else f'Relevant background in {job_title}'}
 - Missing Skills / Growth Areas: {', '.join(missing) if missing else 'General domain depth'}
 
 Return a JSON array of 3 objects with keys:
-- "template_type": ("invite" | "assessment" | "rejection")
-- "title": (e.g. "Round 1 Interview Invitation", "Technical Screening Task", "Constructive Rejection & Future Talent Pool")
+- "template_type": ("interview_invite" | "assessment_request" | "rejection_feedback")
+- "title": (e.g. "Round 1 Interview Invitation", "Take-Home Assessment / Case Study", "Constructive Feedback & Talent Pool")
 - "subject": Email subject line
 - "body": Full email body text with polite greeting, clear context, and placeholders like [Date/Time] or [Company Name] where needed.
 
-Return ONLY valid JSON.
+Return ONLY valid raw JSON.
 """
 
     gpt_response = call_llm(user_prompt, system_prompt)
     if gpt_response:
         try:
-            cleaned = gpt_response.strip().strip("```json").strip("```")
+            cleaned = gpt_response.strip()
+            if cleaned.startswith("```"):
+                cleaned = re.sub(r'^```(?:json)?\s*', '', cleaned)
+                cleaned = re.sub(r'\s*```$', '', cleaned)
             email_list = json.loads(cleaned)
             if isinstance(email_list, list) and len(email_list) >= 3:
                 return {
@@ -48,15 +51,15 @@ Return ONLY valid JSON.
             pass
 
     # 2. Intelligent Local Fallback Templates
-    top_skills_str = ", ".join(matched[:3]) if matched else "technical background"
-    gap_skills_str = ", ".join(missing[:2]) if missing else "role expectations"
+    top_skills_str = ", ".join(matched[:3]) if matched else f"core competency in {job_title}"
+    gap_skills_str = ", ".join(missing[:2]) if missing else "specialized requirements"
 
     # Template 1: Interview Invitation
     invite_body = f"""Dear {name},
 
-Thank you for taking the time to apply for the {job_title} position at our team.
+Thank you for taking the time to apply for the {job_title} position with our team.
 
-Our talent acquisition team and engineering leaders reviewed your resume and were particularly impressed by your background in {top_skills_str}{f' and {exp_years} years of relevant experience' if exp_years else ''}. Your profile stood out as a strong potential match for what we are building.
+Our talent acquisition team reviewed your profile and was particularly impressed by your background in {top_skills_str}{f' and {exp_years} years of relevant experience' if exp_years else ''}. Your profile demonstrates strong alignment with our key initiatives.
 
 We would love to invite you to a 30–45 minute initial technical and culture fit conversation via Google Meet / Zoom. During this call, we will discuss:
 • Your recent projects and experience with {top_skills_str}
