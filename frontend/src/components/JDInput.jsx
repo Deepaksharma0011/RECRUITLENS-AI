@@ -125,6 +125,189 @@ const POPULAR_QUICK_PICKS = [
   "Technical Product Manager"
 ];
 
+// Instant Zero-Latency Benchmark Templates (0ms instant population)
+const BENCHMARK_ROLE_TEMPLATES = {
+  "Full Stack Developer": `Job Title: Full Stack Developer
+Experience Required: 2-5+ Years
+Work Location: Hybrid / Remote / Onsite
+
+Role Overview:
+We are seeking a talented Full Stack Developer to engineer and maintain scalable web applications across the frontend and backend stack. You will build user-friendly interfaces, create robust APIs, and integrate scalable databases.
+
+Key Responsibilities:
+• Architect, build, and deploy responsive web user interfaces using React.js / modern frontend frameworks.
+• Design, implement, and maintain secure RESTful APIs and backend microservices using Node.js / Python.
+• Model and optimize relational and NoSQL databases (PostgreSQL, MongoDB, MySQL).
+• Collaborate with product and design teams, participate in code reviews, and drive CI/CD best practices.
+
+Required Technical & Operational Skills:
+• JavaScript, TypeScript, React.js, Node.js, Python, REST APIs, HTML5/CSS3, Git, PostgreSQL, Docker
+
+Preferred Qualifications:
+• Experience with cloud deployments (AWS / Azure / GCP) and containerization (Docker).
+• Strong understanding of system design, state management, and modern testing frameworks.`,
+
+  "Data Analyst": `Job Title: Data Analyst
+Experience Required: 2-4+ Years
+Work Location: Hybrid / Remote / Onsite
+
+Role Overview:
+We are looking for an analytical Data Analyst to transform complex datasets into actionable business insights, visual dashboards, and strategic recommendations for stakeholders.
+
+Key Responsibilities:
+• Extract, clean, and validate data across enterprise databases and data pipelines using SQL and Python.
+• Build, maintain, and automate interactive dashboards and KPI reports in Power BI / Tableau.
+• Perform exploratory data analysis to identify operational trends, anomalies, and revenue opportunities.
+• Collaborate with cross-functional leadership to deliver data-driven business intelligence.
+
+Required Technical & Operational Skills:
+• SQL, Python, Excel / Advanced Spreadsheets, Power BI, Tableau, Data Visualization, Statistical Analysis
+
+Preferred Qualifications:
+• Experience with data warehousing (Snowflake / BigQuery / Redshift) and ETL pipelines.
+• Strong mathematical, statistical, and business storytelling abilities.`,
+
+  "Social Media Executive": `Job Title: Social Media Executive
+Experience Required: 1-3+ Years
+Work Location: Hybrid / Remote / Onsite
+
+Role Overview:
+We are hiring a creative and data-driven Social Media Executive to drive audience engagement, brand presence, and multi-channel campaign performance across all digital channels.
+
+Key Responsibilities:
+• Plan, write, and publish engaging content across LinkedIn, Instagram, X (Twitter), and YouTube.
+• Manage social media calendars, monitor brand sentiment, and engage with community comments.
+• Analyze campaign metrics (reach, CTR, engagement, follower growth) and generate performance reports.
+• Collaborate with design and video teams to produce high-performing creative assets.
+
+Required Technical & Operational Skills:
+• Social Media Management, Content Creation, Copywriting, Canva, Hootsuite / Buffer, Meta Ads Manager, Analytics
+
+Preferred Qualifications:
+• Proven track record in organic community growth and creative brand storytelling.
+• Familiarity with SEO, influencer marketing, and short-form video strategies.`,
+
+  "Machine Learning Engineer": `Job Title: Machine Learning Engineer
+Experience Required: 2-5+ Years
+Work Location: Hybrid / Remote / Onsite
+
+Role Overview:
+We are seeking an innovative Machine Learning Engineer to design, train, and deploy predictive and deep learning models into production systems.
+
+Key Responsibilities:
+• Build and fine-tune machine learning and deep learning models using PyTorch / TensorFlow.
+• Engineer and scale feature pipelines, data preprocessing, and model validation workflows.
+• Deploy scalable ML inference APIs using FastAPI, Docker, and Kubernetes.
+• Monitor model performance, prevent data drift, and establish MLOps best practices.
+
+Required Technical & Operational Skills:
+• Python, PyTorch, TensorFlow, Scikit-learn, MLOps, Docker, REST APIs, SQL, Data Preprocessing
+
+Preferred Qualifications:
+• Experience with NLP (HuggingFace transformers), Computer Vision, or LLM fine-tuning.
+• Strong background in linear algebra, statistics, and distributed model training.`,
+
+  "DevOps Engineer": `Job Title: DevOps Engineer
+Experience Required: 3-6+ Years
+Work Location: Hybrid / Remote / Onsite
+
+Role Overview:
+We are seeking a proactive DevOps Engineer to automate infrastructure provisioning, enhance CI/CD pipelines, and ensure high availability across cloud platforms.
+
+Key Responsibilities:
+• Design, implement, and maintain automated CI/CD deployment pipelines using GitHub Actions / GitLab CI.
+• Provision and manage Infrastructure as Code (IaC) using Terraform and Ansible.
+• Orchestrate containerized microservices using Kubernetes and Docker.
+• Monitor infrastructure health, configure alerts (Prometheus / Grafana), and troubleshoot production incidents.
+
+Required Technical & Operational Skills:
+• Linux, Docker, Kubernetes, AWS / Azure, Terraform, CI/CD, Bash scripting, Python, Prometheus
+
+Preferred Qualifications:
+• Certified Kubernetes Administrator (CKA) or AWS Certified Solutions Architect.
+• Deep expertise in network security, secrets management, and zero-downtime deployments.`,
+
+  "UI/UX Designer": `Job Title: UI/UX Designer
+Experience Required: 2-5+ Years
+Work Location: Hybrid / Remote / Onsite
+
+Role Overview:
+We are looking for a user-centric UI/UX Designer to craft intuitive, aesthetically compelling digital experiences across web and mobile platforms.
+
+Key Responsibilities:
+• Conduct user research, user interviews, and translate user feedback into wireframes and prototypes.
+• Design modern, high-fidelity UI components and maintain a cohesive Design System in Figma.
+• Collaborate closely with frontend engineering teams to ensure pixel-perfect implementation.
+• Test usability, analyze heatmaps, and iterate based on quantitative user behavior data.
+
+Required Technical & Operational Skills:
+• Figma, Wireframing, Rapid Prototyping, User Research, Design Systems, Usability Testing, HTML/CSS basics
+
+Preferred Qualifications:
+• Strong visual design portfolio showcasing end-to-end design thinking and product outcomes.
+• Experience with design tokens, accessibility (WCAG), and responsive design.`,
+
+  "Technical Product Manager": `Job Title: Technical Product Manager
+Experience Required: 3-6+ Years
+Work Location: Hybrid / Remote / Onsite
+
+Role Overview:
+We are seeking an outcome-focused Technical Product Manager to bridge the gap between engineering, design, and business strategy to launch high-impact software products.
+
+Key Responsibilities:
+• Define product vision, roadmap, and technical requirements in collaboration with leadership.
+• Author clear User Stories, PRDs, and acceptance criteria in Jira.
+• Facilitate Agile ceremonies (sprint planning, backlog grooming, retrospectives) with engineering teams.
+• Track product metrics, analyze user funnels, and prioritize feature iterations.
+
+Required Technical & Operational Skills:
+• Product Roadmap Strategy, Agile / Scrum, PRD Authoring, Jira, Technical Architecture Understanding, SQL
+
+Preferred Qualifications:
+• Prior background in software engineering or computer science.
+• Demonstrated ability to deliver complex technical projects on schedule.`
+};
+
+export const getInstantBenchmarkJD = (roleTitle) => {
+  if (!roleTitle || !roleTitle.trim()) return "";
+  const clean = roleTitle.trim();
+  
+  // 1. Direct match
+  for (const [key, template] of Object.entries(BENCHMARK_ROLE_TEMPLATES)) {
+    if (key.toLowerCase() === clean.toLowerCase()) {
+      return template;
+    }
+  }
+
+  // 2. Partial match
+  for (const [key, template] of Object.entries(BENCHMARK_ROLE_TEMPLATES)) {
+    if (clean.toLowerCase().includes(key.toLowerCase()) || key.toLowerCase().includes(clean.toLowerCase())) {
+      return template;
+    }
+  }
+
+  // 3. Dynamic benchmark for any custom title
+  return `Job Title: ${clean}
+Experience Required: 2-5+ Years
+Work Location: Hybrid / Remote / Onsite
+
+Role Overview:
+We are seeking a motivated and qualified ${clean} to join our organization. In this position, you will drive domain deliverables, collaborate across teams, and ensure high operational excellence in all ${clean} initiatives.
+
+Key Responsibilities:
+• Lead, execute, and monitor day-to-day workflows for the ${clean} function.
+• Collaborate with cross-functional stakeholders to achieve core business and project goals.
+• Track and report on operational KPIs, resolve challenges, and implement best practices.
+• Maintain documentation, compliance standards, and continuous process optimization.
+
+Required Technical & Operational Skills:
+• ${clean} Operations, Problem Solving, Cross-functional Communication, Data Analysis, Project Execution
+
+Preferred Qualifications:
+• Relevant professional experience and hands-on domain competency in ${clean}.
+• Strong organizational, verbal, and written communication skills.`;
+};
+
 const JDInput = ({ jdText, setJdText, jobTitle, setJobTitle }) => {
   const [query, setQuery] = useState(jobTitle || '');
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -162,22 +345,26 @@ const JDInput = ({ jdText, setJdText, jobTitle, setJobTitle }) => {
     setQuery(title);
     setJobTitle(title);
     setShowSuggestions(false);
-    setStatusMsg(`Loading AI-generated description for "${title}"...`);
     setErrorMsg(null);
-    setIsSearching(true);
 
+    // 1. Instant 0ms load - immediately populate JD text so user is never blocked!
+    const instantJd = getInstantBenchmarkJD(title);
+    setJdText(instantJd);
+    setStatusMsg(`✓ Ready: Loaded benchmark job requirements for "${title}".`);
+    setIsSearching(false);
+
+    // 2. Non-blocking background sync with backend if online
     try {
-      const res = await searchJD(title);
+      const resPromise = searchJD(title);
+      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3500));
+      const res = await Promise.race([resPromise, timeoutPromise]);
       if (res && res.jd_text) {
         setJdText(res.jd_text);
-        setStatusMsg(`✓ Ready: Loaded benchmark job requirements for "${title}".`);
       }
     } catch (e) {
-      console.error(e);
-      setErrorMsg("Could not auto-generate JD text. Please paste manually.");
+      // Instant benchmark is already active, ignore background timeout
     } finally {
-      setIsSearching(false);
-      setTimeout(() => setStatusMsg(null), 4000);
+      setTimeout(() => setStatusMsg(null), 3000);
     }
   };
 

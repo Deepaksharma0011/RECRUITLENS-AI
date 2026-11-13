@@ -1,9 +1,14 @@
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional, Tuple
 from app.scoring.bias_mitigator import sanitize_demographic_bias
-from app.scoring.embeddings import compute_semantic_similarity
+from app.scoring.embeddings import compute_semantic_similarity, compute_batch_semantic_similarity
 from app.scoring.anomaly_detector import detect_resume_anomalies
 
-def calculate_candidate_score(candidate_data: Dict[str, Any], jd_data: Dict[str, Any]) -> Dict[str, Any]:
+def calculate_candidate_score(
+    candidate_data: Dict[str, Any],
+    jd_data: Dict[str, Any],
+    semantic_sim: Optional[float] = None,
+    precomputed_sanitized: Optional[Tuple[str, Dict[str, Any]]] = None
+) -> Dict[str, Any]:
     """
     Computes candidate evaluation score:
     - Sanitizes demographic bias from raw resume text
@@ -15,12 +20,16 @@ def calculate_candidate_score(candidate_data: Dict[str, Any], jd_data: Dict[str,
     raw_resume_text = candidate_data.get("raw_text", "")
     candidate_name = candidate_data.get("name", "Candidate")
     
-    # 1. Bias Mitigation Layer
-    sanitized_text, audit_stats = sanitize_demographic_bias(raw_resume_text, candidate_name)
+    # 1. Bias Mitigation Layer (re-use if precomputed in batch)
+    if precomputed_sanitized:
+        sanitized_text, audit_stats = precomputed_sanitized
+    else:
+        sanitized_text, audit_stats = sanitize_demographic_bias(raw_resume_text, candidate_name)
     
     # 2. Semantic Similarity Score (0.0 - 1.0)
-    jd_raw_text = jd_data.get("raw_text", "")
-    semantic_sim = compute_semantic_similarity(sanitized_text, jd_raw_text)
+    if semantic_sim is None:
+        jd_raw_text = jd_data.get("raw_text", "")
+        semantic_sim = compute_semantic_similarity(sanitized_text, jd_raw_text)
     
     # 3. Skill Matching Logic
     candidate_skills = [s.lower() for s in candidate_data.get("skills", [])]
@@ -78,10 +87,37 @@ def calculate_candidate_score(candidate_data: Dict[str, Any], jd_data: Dict[str,
     }
 
 def rank_candidates(candidates_list: List[Dict[str, Any]], jd_data: Dict[str, Any]) -> List[Dict[str, Any]]:
-    """Ranks all uploaded candidates by match score in descending order."""
-    evaluated = []
+    """
+    Ranks all uploaded candidates by match score in descending order.
+    Uses ultra-fast batch semantic embedding (JD encoded ONCE + all candidates in single pass).
+    """
+    if not candidates_list:
+        return []
+
+    # 1. Batch Demographic Bias Mitigation
+    sanitized_items = []
+    sanitized_texts = []
     for cand in candidates_list:
-        score_res = calculate_candidate_score(cand, jd_data)
+        raw_text = cand.get("raw_text", "")
+        cand_name = cand.get("name", "Candidate")
+        san_text, audit_stats = sanitize_demographic_bias(raw_text, cand_name)
+        sanitized_items.append((san_text, audit_stats))
+        sanitized_texts.append(san_text)
+
+    # 2. Batch Embedding Similarity (Single pass)
+    jd_raw_text = jd_data.get("raw_text", "")
+    sim_scores = compute_batch_semantic_similarity(sanitized_texts, jd_raw_text)
+
+    # 3. Assemble and rank results
+    evaluated = []
+    for i, cand in enumerate(candidates_list):
+        sim = sim_scores[i] if i < len(sim_scores) else 0.0
+        score_res = calculate_candidate_score(
+            cand,
+            jd_data,
+            semantic_sim=sim,
+            precomputed_sanitized=sanitized_items[i]
+        )
         evaluated.append(score_res)
     
     # Sort descending by score

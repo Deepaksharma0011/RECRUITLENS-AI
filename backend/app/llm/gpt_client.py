@@ -10,40 +10,42 @@ logger = logging.getLogger(__name__)
 def call_gemini(prompt: str, system_prompt: str = "") -> Optional[str]:
     """Call Google Gemini API using configured GEMINI_API_KEY."""
     gemini_key = settings.GEMINI_API_KEY.strip() if settings.GEMINI_API_KEY else ""
-    if not gemini_key:
+    if not gemini_key or (not gemini_key.startswith("AIzaSy") and not gemini_key.startswith("AQ.")):
         return None
 
-    try:
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key={gemini_key}"
-        
-        full_text = f"{system_prompt}\n\n{prompt}" if system_prompt else prompt
-        payload = {
-            "contents": [{
-                "parts": [{"text": full_text}]
-            }],
-            "generationConfig": {
-                "temperature": 0.4,
-                "maxOutputTokens": 1000
+    for model_name in ["gemini-3.5-flash", "gemini-3.8-flash"]:
+        try:
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={gemini_key}"
+            
+            full_text = f"{system_prompt}\n\n{prompt}" if system_prompt else prompt
+            payload = {
+                "contents": [{
+                    "parts": [{"text": full_text}]
+                }],
+                "generationConfig": {
+                    "temperature": 0.4,
+                    "maxOutputTokens": 800
+                }
             }
-        }
-        
-        data_bytes = json.dumps(payload).encode("utf-8")
-        req = urllib.request.Request(
-            url,
-            data=data_bytes,
-            headers={"Content-Type": "application/json"},
-            method="POST"
-        )
-        
-        with urllib.request.urlopen(req, timeout=12) as response:
-            res_data = json.loads(response.read().decode("utf-8"))
-            candidates = res_data.get("candidates", [])
-            if candidates and "content" in candidates[0]:
-                parts = candidates[0]["content"].get("parts", [])
-                if parts and "text" in parts[0]:
-                    return parts[0]["text"].strip()
-    except Exception as e:
-        logger.warning(f"Gemini API call failed: {e}")
+            
+            data_bytes = json.dumps(payload).encode("utf-8")
+            req = urllib.request.Request(
+                url,
+                data=data_bytes,
+                headers={"Content-Type": "application/json"},
+                method="POST"
+            )
+            
+            with urllib.request.urlopen(req, timeout=4) as response:
+                res_data = json.loads(response.read().decode("utf-8"))
+                candidates = res_data.get("candidates", [])
+                if candidates and "content" in candidates[0]:
+                    parts = candidates[0]["content"].get("parts", [])
+                    if parts and "text" in parts[0]:
+                        return parts[0]["text"].strip()
+        except Exception as e:
+            logger.debug(f"Gemini API attempt with {model_name} failed: {e}")
+            continue
         
     return None
 
