@@ -36,7 +36,7 @@ const Hero3D = ({ onSampleClick }) => {
         z: radius * Math.cos(phi),
         origRadius: radius,
         baseColor: i % 3 === 0 ? '#06b6d4' : i % 3 === 1 ? '#6366f1' : '#10b981',
-        label: ['Python', 'FastAPI', 'React', 'Embeddings', 'NLP', 'Docker', 'AWS', 'PyTorch', 'Vector 768D', 'Bias Shield', 'Cosine Sim', 'K8s', 'SQL', 'LLM'][i % 14]
+        label: ['Python', 'FastAPI', 'React', 'Embeddings', 'NLP', 'Docker', 'AWS', 'PyTorch', 'Embeddings', 'Bias Shield', 'Cosine Sim', 'K8s', 'SQL', 'LLM'][i % 14]
       });
     }
 
@@ -188,24 +188,24 @@ const Hero3D = ({ onSampleClick }) => {
           </div>
 
           <h1 className="hero-3d-title">
-            Unbiased AI Candidate Screening & Matching
+            AI Candidate Screening & Matching
           </h1>
 
           <p className="hero-3d-subtitle">
-            Harness high-dimensional sentence transformer embeddings, automated demographic bias redaction, and GPT-4 explainable scorecards to find your ideal engineers in seconds.
+            Compare resumes with your job requirements using semantic matching, redacted views, and candidate scorecards.
           </p>
 
           <div className="hero-stats-row">
             <div className="hero-stat-box">
-              <span className="hero-stat-value">100%</span>
-              <span className="hero-stat-label">Demographic Blind</span>
+              <span className="hero-stat-value">Blind Mode</span>
+              <span className="hero-stat-label">Redacted Candidate Views</span>
             </div>
             <div className="hero-stat-box">
-              <span className="hero-stat-value">768-D</span>
-              <span className="hero-stat-label">Semantic Embeddings</span>
+              <span className="hero-stat-value">Semantic</span>
+              <span className="hero-stat-label">Resume Matching</span>
             </div>
             <div className="hero-stat-box">
-              <span className="hero-stat-value">&lt;1.2s</span>
+              <span className="hero-stat-value">Batch</span>
               <span className="hero-stat-label">Batch Evaluation</span>
             </div>
             <div className="hero-stat-box">
@@ -222,8 +222,8 @@ const Hero3D = ({ onSampleClick }) => {
               <ShieldCheck size={18} />
             </div>
             <div>
-              <h4 style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>EEOC Fair Hiring Guard</h4>
-              <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', margin: '2px 0 0 0' }}>Names, gender & prestige scrubbed</p>
+              <h4 style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>Resume Redaction</h4>
+              <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', margin: '2px 0 0 0' }}>Masks detected personal details</p>
             </div>
           </div>
 

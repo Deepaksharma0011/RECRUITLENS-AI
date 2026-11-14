@@ -43,7 +43,7 @@ const AnalyticsSummary = ({ candidates, jobTitle, jdSkillsCount, allJdSkills = [
   return (
     <div style={{ marginBottom: '2rem' }}>
       {/* 4 Primary Metric Stat Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.25rem', marginBottom: '1.25rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))', gap: '1.25rem', marginBottom: '1.25rem' }}>
         
         {/* Card 1: Top Ranked Candidate */}
         <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: '1.25rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
@@ -112,7 +112,7 @@ const AnalyticsSummary = ({ candidates, jobTitle, jdSkillsCount, allJdSkills = [
             </span>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))', gap: '1rem' }}>
             {sortedMissingSkills.map(([skillName, count]) => {
               const missingPct = Math.round((count / candidates.length) * 100);
               return (

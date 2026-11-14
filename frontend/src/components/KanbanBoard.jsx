@@ -36,6 +36,10 @@ const KanbanBoard = ({
 
   return (
     <div
+      className="kanban-scroll"
+      role="region"
+      aria-label="Recruiting stages"
+      tabIndex={0}
       style={{
         width: '100%',
         minWidth: 0,
@@ -46,12 +50,12 @@ const KanbanBoard = ({
       }}
     >
       <div
+        className="kanban-columns"
         style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(5, minmax(200px, 1fr))',
           gap: '0.85rem',
-          minHeight: '580px',
-          minWidth: '1020px'
+          minHeight: '580px'
         }}
       >
         {KANBAN_STAGES.map((col) => {
@@ -60,6 +64,7 @@ const KanbanBoard = ({
           return (
             <div
               key={col.id}
+              className="kanban-column"
               onDragOver={handleDragOver}
               onDrop={(e) => handleDrop(e, col.id)}
               style={{
@@ -154,19 +159,13 @@ const KanbanBoard = ({
                       {/* Star Rating */}
                       <div style={{ display: 'flex', alignItems: 'center', gap: '2px', margin: '0.35rem 0' }}>
                         {[1, 2, 3, 4, 5].map((star) => (
-                          <Star
+                          <button type="button" className="rating-button"
                             key={star}
-                            size={13}
-                            fill={(c.rating || 0) >= star ? '#f59e0b' : 'none'}
-                            color={(c.rating || 0) >= star ? '#f59e0b' : 'var(--text-dim)'}
-                            style={{ cursor: 'pointer' }}
-                            onClick={() => {
-                              if (onUpdateCandidateRating) {
-                                const newRating = (c.rating || 0) === star ? 0 : star;
-                                onUpdateCandidateRating(c.candidate_id, newRating);
-                              }
-                            }}
-                          />
+                            aria-label={(c.rating || 0) === star ? 'Clear rating' : `Rate ${star} out of 5`}
+                            onClick={() => onUpdateCandidateRating?.(c.candidate_id, (c.rating || 0) === star ? 0 : star)}
+                          >
+                            <Star size={13} fill={(c.rating || 0) >= star ? '#f59e0b' : 'none'} color={(c.rating || 0) >= star ? '#f59e0b' : 'var(--text-dim)'} />
+                          </button>
                         ))}
                       </div>
 

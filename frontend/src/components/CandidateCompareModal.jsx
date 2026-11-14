@@ -7,7 +7,7 @@ const CandidateCompareModal = ({ candidates, onClose, blindMode }) => {
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div
-        className="modal-content"
+        className="modal-content candidate-compare-dialog"
         onClick={(e) => e.stopPropagation()}
         style={{ maxWidth: '950px', width: '92%' }}
       >
@@ -30,7 +30,8 @@ const CandidateCompareModal = ({ candidates, onClose, blindMode }) => {
         </div>
 
         {/* Matrix Grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: `180px repeat(${candidates.length}, 1fr)`, gap: '1rem', overflowX: 'auto' }}>
+        <div className="candidate-compare-matrix" role="region" aria-label="Candidate comparison matrix" tabIndex={0}
+          style={{ gridTemplateColumns: `minmax(130px, 180px) repeat(${candidates.length}, minmax(150px, 1fr))` }}>
           
           {/* Row Labels Header */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', paddingTop: '4rem', fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-muted)' }}>

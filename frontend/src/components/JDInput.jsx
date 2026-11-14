@@ -393,7 +393,7 @@ const JDInput = ({ jdText, setJdText, jobTitle, setJobTitle }) => {
     if (optimizationResult?.optimized_jd) {
       setJdText(optimizationResult.optimized_jd);
       setShowOptimizerModal(false);
-      setStatusMsg("✓ Applied EEOC-Optimized Inclusive Job Description!");
+      setStatusMsg("✓ Applied Inclusive Job Description!");
       setTimeout(() => setStatusMsg(null), 4000);
     }
   };
@@ -644,7 +644,7 @@ const JDInput = ({ jdText, setJdText, jobTitle, setJobTitle }) => {
           <div
             className="modal-content"
             onClick={(e) => e.stopPropagation()}
-            style={{ maxWidth: '780px', width: '92%', maxHeight: '88vh', display: 'flex', flexDirection: 'column' }}
+            style={{ maxWidth: '780px', width: '92%', display: 'flex', flexDirection: 'column' }}
           >
             <div className="modal-header">
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
@@ -653,7 +653,7 @@ const JDInput = ({ jdText, setJdText, jobTitle, setJobTitle }) => {
                 </div>
                 <div>
                   <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
-                    EEOC Inclusive Language & Bias Audit
+                    Inclusive Language Review
                   </h3>
                   <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                     Audited for: {optimizationResult.job_title}
@@ -670,7 +670,7 @@ const JDInput = ({ jdText, setJdText, jobTitle, setJobTitle }) => {
 
             <div className="modal-body" style={{ flex: 1, overflowY: 'auto' }}>
               {/* Score Badges Bar */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginBottom: '1.25rem' }}>
+              <div className="responsive-dialog-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginBottom: '1.25rem' }}>
                 <div style={{ background: 'var(--bg-dark)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-color)', textAlign: 'center' }}>
                   <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>Inclusivity Index</div>
                   <div style={{ fontSize: '1.6rem', fontWeight: 800, color: optimizationResult.inclusivity_score >= 80 ? '#10b981' : '#f59e0b', margin: '4px 0' }}>

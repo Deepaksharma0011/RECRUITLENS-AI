@@ -123,7 +123,7 @@ RecruitLens AI/
 
 5. Start the FastAPI backend server:
    ```bash
-   uvicorn main:app --reload
+   uvicorn app.main:app --reload
    ```
    The backend server runs at `http://localhost:8000`. OpenAPI documentation is available at `http://localhost:8000/docs`.
 
@@ -161,3 +161,7 @@ RecruitLens AI/
    - Personalized 5-8 interview questions with 1-click copy buttons
    - Side-by-side matched vs missing skills
    - Demographic bias sanitization text preview
+
+Screening data is held in memory by one backend process and accessed using a token stored in the browser tab. It is cleared on reset, becomes inaccessible after eight hours of inactivity, and is lost when the backend restarts. Run one backend worker and one replica for this setup. Persistent recruiter accounts and multi-worker deployments require shared storage.
+
+API clients should call `POST /api/session` and send the returned token as `Authorization: Bearer <token>` on screening requests. Uploads accept text-based PDF, DOCX, and UTF-8 TXT. If any file fails validation, the API reports the affected filenames and keeps the previously accepted batch.

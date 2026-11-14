@@ -173,14 +173,14 @@ const ResumeSplitViewer = ({ candidate, jdSkills = [], onClose, blindMode }) => 
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div
-        className="modal-content"
+        className="modal-content resume-viewer-dialog"
         onClick={(e) => e.stopPropagation()}
-        style={{ maxWidth: '1150px', width: '95%', height: '88vh', display: 'flex', flexDirection: 'column' }}
+        style={{ maxWidth: '1150px', width: '95%', display: 'flex', flexDirection: 'column' }}
       >
         {/* Top Header */}
         <div className="modal-header" style={{ paddingBottom: '0.85rem' }}>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
               <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
                 Interactive Document Viewer: {displayName}
               </h2>
@@ -225,7 +225,7 @@ const ResumeSplitViewer = ({ candidate, jdSkills = [], onClose, blindMode }) => 
           }}
         >
           {/* Search Box */}
-          <div style={{ position: 'relative', width: '280px' }}>
+          <div style={{ position: 'relative', width: '280px', maxWidth: '100%' }}>
             <Search size={14} color="var(--text-muted)" style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)' }} />
             <input
               type="text"
@@ -267,7 +267,7 @@ const ResumeSplitViewer = ({ candidate, jdSkills = [], onClose, blindMode }) => 
         </div>
 
         {/* Split Screen Body */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: '1rem', flex: 1, overflow: 'hidden', padding: '1rem' }}>
+        <div className="resume-viewer-panes">
           
           {/* Left Pane: Highlighted Resume Document */}
           <div
@@ -287,7 +287,7 @@ const ResumeSplitViewer = ({ candidate, jdSkills = [], onClose, blindMode }) => 
                 📄 Candidate Raw Document Stream
               </span>
               <span style={{ fontSize: '0.75rem', color: 'var(--accent-cyan)' }}>
-                {blindMode ? 'EEOC Sanitized' : candidate.filename}
+                {blindMode ? 'Redacted Resume' : candidate.filename}
               </span>
             </div>
             {highlightedContent}

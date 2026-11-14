@@ -11,7 +11,6 @@ import {
   generateQuestions,
   generateEmails,
   generateOnboarding,
-  updateCandidateStatus,
   getRadarMetrics,
   simulateWhatIf,
   getCompensationBenchmark,
@@ -52,12 +51,13 @@ const CandidateDetailModal = ({
   const [offerCopied, setOfferCopied] = useState(false);
 
   // Recruiter Internal State
-  const [stage, setStage] = useState(candidate.stage || 'Screened');
-  const [rating, setRating] = useState(candidate.rating || 0);
+  const stage = candidate.stage || 'Screened';
+  const rating = candidate.rating || 0;
   const [notes, setNotes] = useState(candidate.recruiter_notes || '');
-  const [tags, setTags] = useState(candidate.tags || []);
+  const tags = candidate.tags || [];
   const [newTagInput, setNewTagInput] = useState('');
   const [savingMeta, setSavingMeta] = useState(false);
+  const [metadataError, setMetadataError] = useState(null);
 
   // Voice Interview Practice State
   const [speakingIdx, setSpeakingIdx] = useState(null);
@@ -83,11 +83,6 @@ const CandidateDetailModal = ({
 
   useEffect(() => {
     if (candidate) {
-      setStage(candidate.stage || 'Screened');
-      setRating(candidate.rating || 0);
-      setNotes(candidate.recruiter_notes || '');
-      setTags(candidate.tags || []);
-
       // 1. Fetch Score Explanation
       setLoadingExp(true);
       explainCandidate(candidate.candidate_id)
@@ -102,7 +97,7 @@ const CandidateDetailModal = ({
         .catch(err => console.error(err))
         .finally(() => setLoadingQs(false));
     }
-  }, [candidate]);
+  }, [candidate.candidate_id]);
 
   // Clean up any ongoing TTS when unmounting or switching tabs
   useEffect(() => {
@@ -185,45 +180,33 @@ const CandidateDetailModal = ({
     setTimeout(() => setOfferCopied(false), 2000);
   };
 
-  const handleSaveRecruiterNotes = async () => {
+  const saveMetadata = async (changes) => {
+    if (savingMeta) return false;
     setSavingMeta(true);
+    setMetadataError(null);
     try {
-      await updateCandidateStatus(candidate.candidate_id, {
-        stage,
-        rating,
-        recruiter_notes: notes,
-        tags
-      });
-      if (onUpdateCandidate) {
-        onUpdateCandidate({
-          ...candidate,
-          stage,
-          rating,
-          recruiter_notes: notes,
-          tags
-        });
-      }
-    } catch (e) {
-      console.error(e);
+      await onUpdateCandidate(candidate.candidate_id, changes);
+      return true;
+    } catch (error) {
+      setMetadataError(typeof error.response?.data?.detail === 'string'
+        ? error.response.data.detail
+        : 'Could not save candidate changes. Please try again.');
+      return false;
     } finally {
       setSavingMeta(false);
     }
   };
 
-  const handleAddTag = () => {
-    if (newTagInput.trim() && !tags.includes(newTagInput.trim())) {
-      const updated = [...tags, newTagInput.trim()];
-      setTags(updated);
+  const handleSaveRecruiterNotes = () => saveMetadata({ recruiter_notes: notes });
+
+  const handleAddTag = async () => {
+    const tag = newTagInput.trim();
+    if (tag && !tags.includes(tag) && await saveMetadata({ tags: [...tags, tag] })) {
       setNewTagInput('');
-      updateCandidateStatus(candidate.candidate_id, { tags: updated });
     }
   };
 
-  const handleRemoveTag = (tagToRemove) => {
-    const updated = tags.filter(t => t !== tagToRemove);
-    setTags(updated);
-    updateCandidateStatus(candidate.candidate_id, { tags: updated });
-  };
+  const handleRemoveTag = (tag) => saveMetadata({ tags: tags.filter(value => value !== tag) });
 
   // Text-To-Speech handler for voice simulator
   const handleToggleSpeak = (text, idx) => {
@@ -313,7 +296,7 @@ const CandidateDetailModal = ({
     }).join(' ');
 
     return (
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ overflow: 'visible' }}>
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ maxWidth: '100%', height: 'auto', overflow: 'visible' }}>
         {/* Background Grid webs */}
         {levels.map((lvl, lIdx) => {
           const gridPoints = axes.map((_, i) => {
@@ -409,9 +392,9 @@ const CandidateDetailModal = ({
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div
-        className="modal-content"
+        className="modal-content candidate-detail-dialog"
         onClick={(e) => e.stopPropagation()}
-        style={{ maxWidth: '1080px', width: '95%', maxHeight: '92vh', display: 'flex', flexDirection: 'column' }}
+        style={{ maxWidth: '1080px', width: '95%', display: 'flex', flexDirection: 'column' }}
       >
         {/* Top Header */}
         <div className="modal-header" style={{ paddingBottom: '0.85rem' }}>
@@ -475,10 +458,8 @@ const CandidateDetailModal = ({
             <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600 }}>Pipeline Stage:</span>
             <select
               value={stage}
-              onChange={(e) => {
-                setStage(e.target.value);
-                updateCandidateStatus(candidate.candidate_id, { stage: e.target.value });
-              }}
+              disabled={savingMeta}
+              onChange={(e) => saveMetadata({ stage: e.target.value })}
               style={{
                 fontSize: '0.78rem',
                 background: 'var(--bg-surface)',
@@ -502,18 +483,16 @@ const CandidateDetailModal = ({
             <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600 }}>Recruiter Rating:</span>
             <div style={{ display: 'flex', gap: '2px' }}>
               {[1, 2, 3, 4, 5].map((s) => (
-                <Star
+                <button
                   key={s}
-                  size={15}
-                  fill={rating >= s ? '#f59e0b' : 'none'}
-                  color={rating >= s ? '#f59e0b' : 'var(--text-dim)'}
-                  style={{ cursor: 'pointer' }}
-                  onClick={() => {
-                    const newR = rating === s ? 0 : s;
-                    setRating(newR);
-                    updateCandidateStatus(candidate.candidate_id, { rating: newR });
-                  }}
-                />
+                  type="button"
+                  disabled={savingMeta}
+                  aria-label={rating === s ? 'Clear rating' : `Rate ${s} out of 5`}
+                  style={{ background: 'none', border: 0, padding: 2, cursor: 'pointer' }}
+                  onClick={() => saveMetadata({ rating: rating === s ? 0 : s })}
+                >
+                  <Star size={15} fill={rating >= s ? '#f59e0b' : 'none'} color={rating >= s ? '#f59e0b' : 'var(--text-dim)'} />
+                </button>
               ))}
             </div>
           </div>
@@ -535,11 +514,12 @@ const CandidateDetailModal = ({
                 }}
               >
                 {t}
-                <button onClick={() => handleRemoveTag(t)} style={{ background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', padding: 0, fontSize: '0.7rem' }}>✕</button>
+                <button disabled={savingMeta} onClick={() => handleRemoveTag(t)} style={{ background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', padding: 0, fontSize: '0.7rem' }}>✕</button>
               </span>
             ))}
             <input
               type="text"
+              disabled={savingMeta}
               placeholder="+ Tag"
               value={newTagInput}
               onChange={(e) => setNewTagInput(e.target.value)}
@@ -556,6 +536,10 @@ const CandidateDetailModal = ({
             />
           </div>
         </div>
+
+        {metadataError && (
+          <p role="alert" style={{ padding: '0 1.25rem', color: '#ef4444' }}>{metadataError}</p>
+        )}
 
         {/* Modal Navigation Tabs */}
         <div className="modal-tabs" style={{ overflowX: 'auto', whiteSpace: 'nowrap', display: 'flex', gap: '4px', padding: '0.5rem 1rem' }}>
@@ -634,7 +618,7 @@ const CandidateDetailModal = ({
             onClick={() => setActiveTab('sanitized')}
           >
             <ShieldCheck size={14} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'middle' }} />
-            EEOC Blind Text
+            Redacted Resume Text
           </button>
         </div>
 
@@ -660,7 +644,7 @@ const CandidateDetailModal = ({
                     </p>
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
+                  <div className="responsive-dialog-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
                     <div style={{ background: 'var(--bg-dark)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: '1.25rem' }}>
                       <h4 style={{ color: '#34d399', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 700, marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <CheckCircle size={15} /> Key Domain Strengths
@@ -774,7 +758,7 @@ const CandidateDetailModal = ({
                           </div>
                           <p style={{ fontSize: '0.82rem', color: 'var(--text-body)', margin: 0, lineHeight: '1.5' }}>{q.expected_answer}</p>
                           
-                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginTop: '0.75rem' }}>
+                          <div className="responsive-dialog-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginTop: '0.75rem' }}>
                             {q.green_flags?.length > 0 && (
                               <div style={{ background: 'rgba(16, 185, 129, 0.05)', padding: '0.5rem', borderRadius: '6px', border: '1px solid rgba(16, 185, 129, 0.15)' }}>
                                 <span style={{ color: '#10b981', fontSize: '0.75rem', fontWeight: 700 }}>🟢 Green Flags (Look for):</span>
@@ -812,7 +796,7 @@ const CandidateDetailModal = ({
                   <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>Computing 6-axis competency radar and team complementarity...</p>
                 </div>
               ) : radarData ? (
-                <div style={{ display: 'grid', gridTemplateColumns: '340px 1fr', gap: '1.5rem', alignItems: 'start' }}>
+                <div className="responsive-dialog-grid" style={{ display: 'grid', gridTemplateColumns: '340px 1fr', gap: '1.5rem', alignItems: 'start' }}>
                   {/* Left Column: Visual Radar */}
                   <div style={{ background: 'var(--bg-dark)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: '1.25rem', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                     <h4 style={{ color: 'var(--primary)', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 700, marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -842,7 +826,7 @@ const CandidateDetailModal = ({
                     </div>
 
                     {/* Axis Breakdown Score Cards */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                    <div className="responsive-dialog-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                       {radarData.radar_axes?.map((axis, aIdx) => (
                         <div key={aIdx} style={{ background: 'var(--bg-dark)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '0.85rem' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
@@ -881,7 +865,7 @@ const CandidateDetailModal = ({
                 </p>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
+              <div className="responsive-dialog-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
                 {/* Left: Skill Selection & Controls */}
                 <div style={{ background: 'var(--bg-dark)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: '1.25rem' }}>
                   <h4 style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '0.75rem' }}>
@@ -976,7 +960,7 @@ const CandidateDetailModal = ({
 
                   {whatIfResult ? (
                     <div>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '1rem' }}>
+                      <div className="responsive-dialog-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '1rem' }}>
                         <div style={{ background: 'var(--bg-surface)', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border-color)', textAlign: 'center' }}>
                           <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>Current Score</span>
                           <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--text-main)', marginTop: '2px' }}>
@@ -1039,7 +1023,7 @@ const CandidateDetailModal = ({
               ) : compensationData ? (
                 <div>
                   {/* Percentile Cards Grid */}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.75rem', marginBottom: '1.25rem' }}>
+                  <div className="responsive-dialog-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.75rem', marginBottom: '1.25rem' }}>
                     <div style={{ background: 'var(--bg-dark)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '0.85rem', textAlign: 'center' }}>
                       <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>25th Percentile</span>
                       <div style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-main)', marginTop: '4px' }}>
@@ -1082,7 +1066,7 @@ const CandidateDetailModal = ({
                   </div>
 
                   {/* Budget Fit & Skill Premium Breakdown */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
+                  <div className="responsive-dialog-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
                     {/* Hiring Budget Fit Calculator */}
                     <div style={{ background: 'var(--bg-dark)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: '1.25rem' }}>
                       <h4 style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -1149,7 +1133,7 @@ const CandidateDetailModal = ({
           {/* TAB 6: ONE-CLICK AI OFFER LETTER GENERATOR */}
           {activeTab === 'offer' && (
             <div>
-              <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: '1.25rem' }}>
+              <div className="responsive-dialog-grid" style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: '1.25rem' }}>
                 {/* Left: Offer Parameters Editor */}
                 <div style={{ background: 'var(--bg-dark)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: '1.25rem' }}>
                   <h4 style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -1361,7 +1345,7 @@ const CandidateDetailModal = ({
                     </p>
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
+                  <div className="responsive-dialog-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
                     {(onboardingData.phases || []).map((phase, pIdx) => (
                       <div key={pIdx} style={{ background: 'var(--bg-dark)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: '1rem' }}>
                         <div style={{ fontSize: '0.72rem', color: 'var(--accent-cyan)', fontWeight: 800, textTransform: 'uppercase' }}>
@@ -1443,7 +1427,7 @@ const CandidateDetailModal = ({
 
           {/* TAB 10: MATCHED SKILLS */}
           {activeTab === 'skills' && (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
+            <div className="responsive-dialog-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
               <div style={{ background: 'var(--bg-dark)', border: '1px solid rgba(16, 185, 129, 0.3)', borderRadius: 'var(--radius-md)', padding: '1.25rem' }}>
                 <h4 style={{ color: '#34d399', fontSize: '0.9rem', fontWeight: 700, marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <CheckCircle size={18} /> Matched Skills ({candidate.matched_skills?.length || 0})

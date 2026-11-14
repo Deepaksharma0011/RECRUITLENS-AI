@@ -1,9 +1,6 @@
 import io
-import logging
 import zipfile
 import xml.etree.ElementTree as ET
-
-logger = logging.getLogger(__name__)
 
 def extract_text_from_docx(content: bytes) -> str:
     """Extract raw text from a .docx file."""
@@ -21,6 +18,5 @@ def extract_text_from_docx(content: bytes) -> str:
                     paragraphs.append(''.join(texts))
             
             return '\n'.join(paragraphs).strip()
-    except Exception as e:
-        logger.warning(f"DOCX extraction failed ({e}), using binary decode.")
-        return content.decode('utf-8', errors='ignore')
+    except (zipfile.BadZipFile, KeyError, ET.ParseError) as exc:
+        raise ValueError("Invalid DOCX file") from exc

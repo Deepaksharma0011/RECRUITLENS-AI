@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { UploadCloud, FileText, CheckCircle2, Trash2, Sparkles } from 'lucide-react';
 
-const ResumeUploader = ({ onFilesSelected, files, parsedCount, isLoading }) => {
+const ResumeUploader = ({ onFilesSelected, files, parsedCount, isLoading, disabled }) => {
   const fileInputRef = useRef(null);
   const [isDragOver, setIsDragOver] = useState(false);
 
@@ -18,7 +18,7 @@ const ResumeUploader = ({ onFilesSelected, files, parsedCount, isLoading }) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragOver(false);
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+    if (!disabled && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       onFilesSelected(Array.from(e.dataTransfer.files));
     }
   };
@@ -54,7 +54,6 @@ const ResumeUploader = ({ onFilesSelected, files, parsedCount, isLoading }) => {
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        onClick={() => fileInputRef.current && fileInputRef.current.click()}
         style={{ position: 'relative', overflow: 'hidden' }}
       >
         {/* 3D Hologram Laser Scan Line */}
@@ -65,17 +64,20 @@ const ResumeUploader = ({ onFilesSelected, files, parsedCount, isLoading }) => {
           ref={fileInputRef}
           onChange={handleFileChange}
           multiple
-          accept=".pdf,.docx,.doc,.txt"
+          disabled={disabled}
+          accept=".pdf,.docx,.txt"
           style={{ display: 'none' }}
         />
         <div className="dropzone-icon">
           <UploadCloud size={26} />
         </div>
-        <p style={{ fontWeight: 700, fontSize: '0.95rem', marginBottom: '0.25rem' }}>
-          Drag & Drop Candidate Resumes Here
-        </p>
+        <button type="button" className="btn-secondary" disabled={disabled}
+          onClick={() => fileInputRef.current?.click()}>
+          Choose Resume Files
+        </button>
+        <p className="resume-drop-hint">Or drag and drop files here</p>
         <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-          Supports PDF, DOCX, DOC, and TXT formats
+          Supports text-based PDF, DOCX, and UTF-8 TXT. Convert old DOC files to DOCX.
         </p>
       </div>
 

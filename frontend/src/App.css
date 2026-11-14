@@ -112,6 +112,11 @@ input, textarea, select {
   justify-content: space-between;
   align-items: center;
   padding: 1.15rem 2rem;
+  padding-top: max(1.15rem, env(safe-area-inset-top));
+  padding-left: max(2rem, env(safe-area-inset-left));
+  padding-right: max(2rem, env(safe-area-inset-right));
+  flex-wrap: wrap;
+  gap: 0.75rem;
   background: var(--bg-glass);
   backdrop-filter: blur(16px);
   border-bottom: 1px solid var(--border-color);
@@ -140,6 +145,7 @@ body.theme-light .app-header {
 }
 
 .logo-icon-bg {
+  flex-shrink: 0;
   width: 44px;
   height: 44px;
   border-radius: var(--radius-md);
@@ -169,6 +175,7 @@ body.theme-light .app-header {
   display: flex;
   align-items: center;
   gap: 0.75rem;
+  flex-wrap: wrap;
 }
 
 .status-pill {
@@ -419,6 +426,9 @@ body.theme-light .hero-3d-title {
   max-width: 1440px;
   margin: 0 auto;
   padding: 2rem;
+  padding-left: max(2rem, env(safe-area-inset-left));
+  padding-right: max(2rem, env(safe-area-inset-right));
+  padding-bottom: max(2rem, env(safe-area-inset-bottom));
 }
 
 .dashboard-grid {
@@ -759,10 +769,7 @@ body.theme-light .avatar-badge {
 /* Modal Drawer Overlay */
 .modal-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
+  inset: 0;
   background: rgba(0, 0, 0, 0.6);
   backdrop-filter: blur(8px);
   display: flex;
@@ -770,6 +777,10 @@ body.theme-light .avatar-badge {
   justify-content: center;
   z-index: 1000;
   padding: 1.5rem;
+  padding-top: max(1.5rem, env(safe-area-inset-top));
+  padding-right: max(1.5rem, env(safe-area-inset-right));
+  padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
+  padding-left: max(1.5rem, env(safe-area-inset-left));
 }
 
 .modal-content {
@@ -779,6 +790,8 @@ body.theme-light .avatar-badge {
   width: 100%;
   max-width: 900px;
   max-height: 90vh;
+  max-height: 100%;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
@@ -792,6 +805,8 @@ body.theme-light .avatar-badge {
   align-items: center;
   justify-content: space-between;
   background: var(--bg-surface);
+  gap: 0.75rem;
+  flex-wrap: wrap;
 }
 
 .modal-tabs {
@@ -866,6 +881,190 @@ body.theme-light .tab-btn.active {
   padding: 1.5rem 1.75rem;
   overflow-y: auto;
   flex: 1;
+  min-height: 0;
+}
+
+.responsive-dialog-grid > *,
+.resume-viewer-panes > * {
+  min-width: 0;
+  min-height: 0;
+}
+
+.candidate-compare-dialog {
+  padding: 1.25rem;
+}
+
+.candidate-compare-matrix,
+.candidate-table-scroll {
+  min-width: 0;
+  overflow: auto;
+}
+
+.candidate-compare-matrix {
+  display: grid;
+  gap: 1rem;
+}
+
+.candidate-table-scroll {
+  flex: 1;
+  width: 100%;
+}
+
+.resume-viewer-dialog {
+  height: 88vh;
+  height: 88dvh;
+}
+
+.resume-viewer-panes {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: 1rem;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  padding: 1rem;
+}
+
+.app-container,
+.modal-content {
+  overflow-wrap: anywhere;
+}
+
+.resume-drop-hint {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.rating-button {
+  display: inline-grid;
+  place-items: center;
+  border: 0;
+  padding: 3px;
+  background: transparent;
+  cursor: pointer;
+}
+
+@media screen and (max-width: 768px), screen and (max-height: 500px) {
+  .app-header {
+    position: relative;
+  }
+
+  .modal-overlay {
+    padding-top: max(0.5rem, env(safe-area-inset-top));
+    padding-right: max(0.5rem, env(safe-area-inset-right));
+    padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+    padding-left: max(0.5rem, env(safe-area-inset-left));
+  }
+
+  .modal-overlay .modal-content {
+    display: block !important;
+    width: 100% !important;
+    height: auto;
+    max-height: 100% !important;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+  }
+
+  .modal-header,
+  .modal-overlay .modal-body {
+    padding: 0.85rem !important;
+  }
+
+  .resume-viewer-panes {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .resume-viewer-panes > * {
+    height: auto !important;
+    overflow-y: visible !important;
+  }
+}
+
+@media screen and (max-width: 640px) {
+  .app-header,
+  .app-container {
+    padding-left: max(0.75rem, env(safe-area-inset-left));
+    padding-right: max(0.75rem, env(safe-area-inset-right));
+  }
+
+  .app-container {
+    padding-top: 0.85rem;
+  }
+
+  .dashboard-grid {
+    gap: 1rem;
+  }
+
+  .panel-card,
+  .hero-3d-content {
+    padding: 0.85rem;
+  }
+
+  .hero-3d-wrapper {
+    min-height: 0;
+  }
+
+  .hero-3d-title {
+    font-size: clamp(1.4rem, 6vw, 1.8rem);
+  }
+
+  .hero-stats-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+  }
+
+  .hero-stat-box {
+    padding: 0.5rem;
+  }
+
+  .hero-stat-value {
+    font-size: 1rem;
+  }
+
+  .section-title-row,
+  .uploaded-file-tag {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .responsive-dialog-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .kanban-scroll {
+    scroll-snap-type: x proximity;
+  }
+
+  .kanban-scroll .kanban-columns {
+    grid-template-columns: repeat(5, min(82vw, 285px)) !important;
+    min-height: 0 !important;
+  }
+
+  .kanban-column {
+    scroll-snap-align: start;
+  }
+}
+
+@media (pointer: coarse) {
+  .resume-drop-hint {
+    display: none;
+  }
+
+  .app-root button,
+  .app-root .dropzone {
+    min-height: 44px;
+  }
+
+  .app-root .rating-button {
+    min-width: 32px;
+  }
+
+  .app-root input:not([type="checkbox"]):not([type="range"]),
+  .app-root textarea,
+  .app-root select {
+    font-size: 16px !important;
+  }
 }
 
 /* Question List & Explanation formatting */
@@ -928,6 +1127,26 @@ body.theme-light .tab-btn.active {
 
 /* Print Optimization Stylesheet */
 @media print {
+  #root:has(.screening-summary-overlay) .app-container {
+    display: none !important;
+  }
+
+  #root .screening-summary-overlay {
+    display: block !important;
+    position: static !important;
+    background: white !important;
+  }
+
+  .screening-summary-overlay .modal-content {
+    width: auto;
+    max-width: none;
+    max-height: none;
+    color: black;
+    background: white;
+    border: 0;
+    box-shadow: none;
+  }
+
   body {
     background: #ffffff !important;
     color: #000000 !important;

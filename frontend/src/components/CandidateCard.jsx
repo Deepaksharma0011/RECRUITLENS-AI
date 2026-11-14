@@ -153,19 +153,13 @@ const CandidateCard = ({
                 {/* Interactive Star Rating */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '2px', marginLeft: '4px' }}>
                   {[1, 2, 3, 4, 5].map((star) => (
-                    <Star
+                    <button type="button" className="rating-button"
                       key={star}
-                      size={12}
-                      fill={(candidate.rating || 0) >= star ? '#f59e0b' : 'none'}
-                      color={(candidate.rating || 0) >= star ? '#f59e0b' : 'var(--text-dim)'}
-                      style={{ cursor: 'pointer' }}
-                      onClick={() => {
-                        if (onUpdateRating) {
-                          const newR = (candidate.rating || 0) === star ? 0 : star;
-                          onUpdateRating(candidate.candidate_id, newR);
-                        }
-                      }}
-                    />
+                      aria-label={(candidate.rating || 0) === star ? 'Clear rating' : `Rate ${star} out of 5`}
+                      onClick={() => onUpdateRating?.(candidate.candidate_id, (candidate.rating || 0) === star ? 0 : star)}
+                    >
+                      <Star size={12} fill={(candidate.rating || 0) >= star ? '#f59e0b' : 'none'} color={(candidate.rating || 0) >= star ? '#f59e0b' : 'var(--text-dim)'} />
+                    </button>
                   ))}
                 </div>
               </div>

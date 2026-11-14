@@ -10,6 +10,35 @@ const api = axios.create({
   },
 });
 
+const sessionKey = 'recruitlens_screening_session';
+let pendingSession;
+
+api.interceptors.request.use(async (config) => {
+  const savedToken = sessionStorage.getItem(sessionKey);
+  if (savedToken) {
+    config.headers.Authorization = `Bearer ${savedToken}`;
+    return config;
+  }
+
+  pendingSession ??= axios.post(`${API_BASE_URL}/session`)
+    .then(({ data }) => {
+      sessionStorage.setItem(sessionKey, data.token);
+      return data.token;
+    })
+    .finally(() => { pendingSession = undefined; });
+  config.headers.Authorization = `Bearer ${await pendingSession}`;
+  return config;
+});
+
+api.interceptors.response.use(undefined, (error) => {
+  const token = sessionStorage.getItem(sessionKey);
+  if (token && error.response?.status === 401 &&
+      error.config?.headers?.Authorization === `Bearer ${token}`) {
+    sessionStorage.removeItem(sessionKey);
+  }
+  return Promise.reject(error);
+});
+
 export const uploadResumes = async (fileList) => {
   const formData = new FormData();
   for (let i = 0; i < fileList.length; i++) {
@@ -68,7 +97,7 @@ export const generateOnboarding = async (candidateId) => {
 
 export const updateCandidateStatus = async (candidateId, updateData) => {
   const response = await api.post(`/update-candidate/${candidateId}`, updateData);
-  return response.data;
+  return response.data.candidate;
 };
 
 export const getResults = async () => {

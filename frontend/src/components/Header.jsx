@@ -3,6 +3,7 @@ import { Target, RefreshCw, ShieldCheck, Eye, EyeOff, FileText, Download, Sun, M
 
 const Header = ({
   onReset,
+  resetDisabled,
   backendConnected,
   blindMode,
   setBlindMode,
@@ -32,7 +33,7 @@ const Header = ({
         </div>
         <div>
           <h1 className="brand-title">RecruitLens AI</h1>
-          <span className="brand-tag">Enterprise Demographic-Unbiased Resume Screener & ATS</span>
+          <span className="brand-tag">Resume Screening & Applicant Tracking</span>
         </div>
       </div>
 
@@ -81,7 +82,7 @@ const Header = ({
           <span>{blindMode ? 'Blind Hiring: ON' : 'Blind Hiring: OFF'}</span>
         </button>
 
-        {/* EEOC Audit Certificate Button */}
+        {/* Screening Summary Button */}
         <button
           className="btn-secondary"
           onClick={onOpenEEOCAudit}
@@ -94,10 +95,10 @@ const Header = ({
             fontWeight: 700,
             borderRadius: '20px'
           }}
-          title="Open EEOC / Fair-Hiring Compliance Certificate"
+          title="Open screening summary"
         >
           <Award size={14} color="#10b981" />
-          <span>EEOC Certificate</span>
+          <span>Screening Summary</span>
         </button>
 
         {/* Report Exports */}
@@ -128,6 +129,7 @@ const Header = ({
         <button
           className="btn-secondary"
           onClick={onReset}
+          disabled={resetDisabled}
           style={{ fontSize: '0.78rem', padding: '0.4rem 0.75rem' }}
           title="Reset current session and clear uploaded files"
         >

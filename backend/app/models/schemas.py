@@ -61,6 +61,12 @@ class EvaluationResultsResponse(BaseModel):
     jd_skills: List[str]
     candidates: List[CandidateScoreResult]
 
+class CandidateMetadataUpdate(BaseModel):
+    stage: Optional[str] = None
+    rating: Optional[int] = Field(default=None, ge=0, le=5, strict=True)
+    recruiter_notes: Optional[str] = None
+    tags: Optional[List[str]] = None
+
 class CandidateExplanationResponse(BaseModel):
     candidate_id: str
     candidate_name: str

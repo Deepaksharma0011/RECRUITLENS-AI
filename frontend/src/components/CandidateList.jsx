@@ -289,7 +289,7 @@ const CandidateList = ({
       {/* Controls Bar: Search & Sort */}
       {candidates.length > 0 && viewMode !== 'kanban' && (
         <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
-          <div style={{ position: 'relative', flex: 1, minWidth: '180px' }}>
+          <div style={{ position: 'relative', flex: 1, minWidth: 'min(180px, 100%)' }}>
             <Search size={14} color="var(--text-dim)" style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)' }} />
             <input
               type="text"
@@ -370,7 +370,7 @@ const CandidateList = ({
 
       {/* VIEW 2: TABLE MATRIX VIEW */}
       {!isLoading && candidates.length > 0 && viewMode === 'table' && (
-        <div style={{ overflowX: 'auto', flex: 1, minWidth: 0, width: '100%' }}>
+        <div className="candidate-table-scroll" role="region" aria-label="Candidate results table" tabIndex={0}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem', textAlign: 'left', minWidth: '700px' }}>
             <thead>
               <tr style={{ background: 'var(--bg-dark)', borderBottom: '1px solid var(--border-color)', color: 'var(--text-muted)' }}>

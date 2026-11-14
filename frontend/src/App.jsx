@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import Header from './components/Header';
 import Hero3D from './components/Hero3D';
 import ResumeUploader from './components/ResumeUploader';
@@ -24,6 +24,8 @@ function App() {
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [parsedCandidates, setParsedCandidates] = useState([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
+  const pendingCandidateUpdates = useRef(new Set());
   const [jdText, setJdText] = useState('');
   const [jobTitle, setJobTitle] = useState('');
   const [jdSkills, setJdSkills] = useState([]);
@@ -123,15 +125,17 @@ function App() {
   // Handle uploading candidate resume files
   const handleFilesSelected = async (files) => {
     const uniqueFiles = deduplicateFiles(files);
-    setSelectedFiles(uniqueFiles);
-    setRawRankedCandidates([]);
-    setSelectedCompareIds([]);
     setErrorMsg(null);
     setIsUploading(true);
     try {
       const parsed = await uploadResumes(uniqueFiles);
+      setSelectedFiles(uniqueFiles);
       setParsedCandidates(parsed);
-      setErrorMsg(null);
+      setRawRankedCandidates([]);
+      setSelectedCompareIds([]);
+      setSelectedCandidate(null);
+      setSplitViewerCandidate(null);
+      return true;
     } catch (err) {
       console.error(err);
       setErrorMsg(err.response?.data?.detail || "Failed to upload or parse resume files.");
@@ -142,7 +146,6 @@ function App() {
 
   // Quick 1-Click Load Sample Candidate Resumes
   const handleLoadSampleResumes = async () => {
-    setRawRankedCandidates([]);
     setSelectedCompareIds([]);
     setErrorMsg(null);
     
@@ -212,40 +215,27 @@ B.A. in Graphic Design — State College (2016 – 2020)`;
     const file3 = new File([cand3Text], "Resume_Jordan_Bennett_Frontend.txt", { type: "text/plain" });
 
     const sampleFiles = [file1, file2, file3];
-    setSelectedFiles(sampleFiles);
-
-    if (!jdText || !jdText.trim()) {
-      setJobTitle("Senior Full Stack Engineer");
-      setJdText(`Job Title: Senior Full Stack Engineer
+    const sampleJD = `Job Title: Senior Full Stack Engineer
 Experience: 4+ Years
 
 Role Overview:
 We are looking for a Senior Full Stack Engineer to lead backend microservices and modern React frontend web applications.
 
 Required Technical Skills:
-• Python, FastAPI, JavaScript, TypeScript, React (React.js), PostgreSQL, Docker, AWS, REST API, System Design, Git, CI/CD, Agile methodology.`);
-    }
-
-    setIsUploading(true);
-    try {
-      const parsed = await uploadResumes(sampleFiles);
-      setParsedCandidates(parsed);
-      setErrorMsg(null);
-    } catch (err) {
-      console.error(err);
-      setErrorMsg("Failed to upload sample resumes.");
-    } finally {
-      setIsUploading(false);
+• Python, FastAPI, JavaScript, TypeScript, React (React.js), PostgreSQL, Docker, AWS, REST API, System Design, Git, CI/CD, Agile methodology.`;
+    const uploaded = await handleFilesSelected(sampleFiles);
+    if (uploaded && !jdText.trim()) {
+      setJdText(sampleJD);
+      setJobTitle("Senior Full Stack Engineer");
     }
   };
 
   // Main evaluation trigger
   const handleEvaluatePipeline = async () => {
     setErrorMsg(null);
-    const hasFiles = Boolean(selectedFiles && selectedFiles.length > 0);
     const hasParsed = Boolean(parsedCandidates && parsedCandidates.length > 0);
 
-    if (!hasFiles && !hasParsed) {
+    if (!hasParsed) {
       setErrorMsg("Please upload candidate resumes or click 'Load 3 Sample Resumes' first.");
       return;
     }
@@ -256,30 +246,16 @@ Required Technical Skills:
 
     setIsEvaluating(true);
     try {
-      let activeParsed = parsedCandidates;
-
-      // If files are selected and not yet parsed, parse them now seamlessly
-      if (hasFiles && (!activeParsed || activeParsed.length === 0 || activeParsed.length !== selectedFiles.length)) {
-        const uniqueFiles = deduplicateFiles(selectedFiles);
-        activeParsed = await uploadResumes(uniqueFiles);
-        setParsedCandidates(activeParsed);
-      }
-
-      if (!activeParsed || activeParsed.length === 0) {
-        setErrorMsg("Failed to extract candidate resumes. Please re-upload your files.");
-        return;
-      }
-
       const jdRes = await parseJD(jdText, jobTitle);
       setJdSkills(jdRes.required_skills);
 
       const scoresRes = await scoreCandidates();
       
       // Strict candidate matching filter against activeParsed
-      const validCandidateIds = new Set((activeParsed || []).map(c => c.candidate_id));
+      const validCandidateIds = new Set(parsedCandidates.map(c => c.candidate_id));
       const filteredScores = scoresRes.filter(c => validCandidateIds.has(c.candidate_id));
 
-      setRawRankedCandidates(filteredScores.length > 0 ? filteredScores : scoresRes);
+      setRawRankedCandidates(filteredScores);
       setBackendConnected(true);
 
       if (scoresRes.length > 0 && scoresRes[0].score >= 75) {
@@ -299,12 +275,20 @@ Required Technical Skills:
 
   // Reset current session
   const handleResetSession = async () => {
+    setIsResetting(true);
     try {
       await resetSession();
-    } catch (e) {}
+    } catch (err) {
+      setErrorMsg(err.response?.data?.detail || "Reset failed. Please try again.");
+      return;
+    } finally {
+      setIsResetting(false);
+    }
     setSelectedFiles([]);
     setParsedCandidates([]);
     setJdText('');
+    setJobTitle('');
+    setJdSkills([]);
     setRawRankedCandidates([]);
     setSelectedCandidate(null);
     setSplitViewerCandidate(null);
@@ -313,19 +297,31 @@ Required Technical Skills:
   };
 
   // Candidate Status & Stage Updates
-  const handleUpdateCandidateStage = (candidateId, newStage) => {
-    setRawRankedCandidates(prev => prev.map(c => c.candidate_id === candidateId ? { ...c, stage: newStage } : c));
-    updateCandidateStatus(candidateId, { stage: newStage });
+  const saveCandidate = async (candidateId, changes) => {
+    if (pendingCandidateUpdates.current.has(candidateId)) {
+      throw new Error("Another update is still saving. Try again in a moment.");
+    }
+    pendingCandidateUpdates.current.add(candidateId);
+    try {
+      const saved = await updateCandidateStatus(candidateId, changes);
+      const applySavedFields = (candidate) => candidate?.candidate_id === candidateId
+        ? { ...candidate, stage: saved.stage, rating: saved.rating, recruiter_notes: saved.recruiter_notes, tags: saved.tags }
+        : candidate;
+      setRawRankedCandidates(prev => prev.map(applySavedFields));
+      setSelectedCandidate(applySavedFields);
+    } finally {
+      pendingCandidateUpdates.current.delete(candidateId);
+    }
   };
 
-  const handleUpdateCandidateRating = (candidateId, newRating) => {
-    setRawRankedCandidates(prev => prev.map(c => c.candidate_id === candidateId ? { ...c, rating: newRating } : c));
-    updateCandidateStatus(candidateId, { rating: newRating });
-  };
-
-  const handleUpdateCandidate = (updatedCand) => {
-    setRawRankedCandidates(prev => prev.map(c => c.candidate_id === updatedCand.candidate_id ? updatedCand : c));
-    setSelectedCandidate(updatedCand);
+  const saveCandidateFromList = async (candidateId, changes) => {
+    setErrorMsg(null);
+    try {
+      await saveCandidate(candidateId, changes);
+    } catch (err) {
+      const detail = err.response?.data?.detail;
+      setErrorMsg(typeof detail === 'string' ? detail : err.message || "Could not save candidate changes.");
+    }
   };
 
   // Multi-Candidate Compare Selection Toggle
@@ -379,6 +375,7 @@ Required Technical Skills:
     <div className={`app-root ${theme === 'dark' ? 'theme-dark' : 'theme-light'}`}>
       <Header
         onReset={handleResetSession}
+        resetDisabled={isUploading || isEvaluating || isResetting}
         backendConnected={backendConnected}
         blindMode={blindMode}
         setBlindMode={setBlindMode}
@@ -442,7 +439,7 @@ Required Technical Skills:
               <button
                 className="btn-secondary"
                 onClick={handleLoadSampleResumes}
-                disabled={isUploading}
+                disabled={isUploading || isEvaluating || isResetting}
                 style={{ background: 'rgba(6, 182, 212, 0.15)', borderColor: 'rgba(6, 182, 212, 0.3)', color: 'var(--accent-cyan)' }}
               >
                 <Sparkles size={14} />
@@ -454,6 +451,7 @@ Required Technical Skills:
               files={selectedFiles}
               parsedCount={parsedCandidates.length}
               isLoading={isUploading}
+              disabled={isUploading || isEvaluating || isResetting}
               onFilesSelected={handleFilesSelected}
             />
 
@@ -468,7 +466,7 @@ Required Technical Skills:
               <button
                 className="btn-primary"
                 onClick={handleEvaluatePipeline}
-                disabled={isEvaluating}
+                disabled={isEvaluating || isUploading || isResetting}
               >
                 {isEvaluating ? (
                   <>
@@ -499,8 +497,8 @@ Required Technical Skills:
               onOpenCompare={() => setIsCompareOpen(true)}
               onOpenKnockoutModal={() => setIsKnockoutModalOpen(true)}
               knockoutConfig={knockoutConfig}
-              onUpdateCandidateStage={handleUpdateCandidateStage}
-              onUpdateCandidateRating={handleUpdateCandidateRating}
+              onUpdateCandidateStage={(id, stage) => saveCandidateFromList(id, { stage })}
+              onUpdateCandidateRating={(id, rating) => saveCandidateFromList(id, { rating })}
               isFullWidth={isFullWidthATS}
               onToggleFullWidth={() => setIsFullWidthATS(prev => !prev)}
             />
@@ -511,10 +509,11 @@ Required Technical Skills:
       {/* Candidate Detail Modal */}
       {selectedCandidate && (
         <CandidateDetailModal
+          key={selectedCandidate.candidate_id}
           candidate={selectedCandidate}
           onClose={() => setSelectedCandidate(null)}
           blindMode={blindMode}
-          onUpdateCandidate={handleUpdateCandidate}
+          onUpdateCandidate={saveCandidate}
           onOpenSplitViewer={(c) => {
             setSelectedCandidate(null);
             setSplitViewerCandidate(c);
@@ -541,10 +540,10 @@ Required Technical Skills:
         />
       )}
 
-      {/* EEOC Compliance Audit Certificate Modal */}
+      {/* Screening Summary */}
       {isEEOCAuditOpen && (
         <EEOCAuditModal
-          totalEvaluated={displayedCandidates.length}
+          totalEvaluated={rawRankedCandidates.length}
           jobTitle={jobTitle}
           onClose={() => setIsEEOCAuditOpen(false)}
         />

@@ -1,14 +1,14 @@
 import uuid
 import logging
 from typing import List, Optional, Dict, Any
-from fastapi import APIRouter, UploadFile, File, HTTPException, Body
+from fastapi import APIRouter, UploadFile, File, HTTPException, Body, Depends, Response
 from app.models.schemas import (
     JDParseRequest, JDParseResponse, JDSearchRequest, JDSearchResponse,
     CandidateParsedInfo, CandidateScoreResult,
     EvaluationResultsResponse, CandidateExplanationResponse,
     CandidateQuestionsResponse, CandidateEmailsResponse,
     OnboardingPlanResponse, JDOptimizeRequest, JDOptimizeResponse,
-    WhatIfRequest, WhatIfResponse
+    WhatIfRequest, WhatIfResponse, CandidateMetadataUpdate
 )
 from app.parsing.pdf_parser import extract_text_from_pdf
 from app.parsing.docx_parser import extract_text_from_docx
@@ -20,85 +20,70 @@ from app.llm.question_generator import generate_personalized_interview_questions
 from app.llm.email_generator import generate_candidate_emails
 from app.llm.onboarding_generator import generate_onboarding_plan
 from app.llm.jd_generator import generate_jd_from_search, get_online_job_title_suggestions
-from app.storage.session_store import session_store
+from app.storage.session_store import SessionStore, create_session, require_session
+from app.scoring.bias_mitigator import sanitize_demographic_bias
 
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
+@router.post("/session", status_code=201)
+async def start_session(response: Response):
+    response.headers["Cache-Control"] = "private, no-store"
+    return {"token": await create_session()}
+
+
 @router.post("/upload-resumes", response_model=List[CandidateParsedInfo])
-async def upload_resumes(files: List[UploadFile] = File(...)):
-    """Accept multiple candidate resumes (PDF, DOCX, TXT) and extract structured fields."""
-    if not files:
-        raise HTTPException(status_code=400, detail="No files uploaded.")
-
-    # Deduplicate incoming files by filename
-    seen_filenames = set()
-    unique_files = []
-    for f in files:
-        if f.filename not in seen_filenames:
-            seen_filenames.add(f.filename)
-            unique_files.append(f)
-
-    # Clear previous resumes and old score cache to ensure only newly uploaded candidates are evaluated
-    session_store.resumes.clear()
-    session_store.scored_results.clear()
-    session_store.explanations.clear()
-    session_store.interview_questions.clear()
-
+async def upload_resumes(
+    files: List[UploadFile] = File(...),
+    session_store: SessionStore = Depends(require_session),
+):
+    """Validate the full batch before replacing the current resumes."""
+    candidates = []
     parsed_candidates = []
-    for file in unique_files:
+    errors = []
+    for file in files:
+        filename = file.filename or "Unnamed file"
+        extension = filename.lower().rpartition(".")[2] if "." in filename else ""
+        if extension not in {"pdf", "docx", "txt"}:
+            errors.append(f"{filename}: use PDF, DOCX, or TXT. Convert old .doc files to .docx.")
+            continue
         try:
-            filename = file.filename
             content = await file.read()
-            raw_text = ""
-            
-            if filename.lower().endswith('.pdf'):
+            if extension == "pdf":
                 raw_text = extract_text_from_pdf(content)
-            elif filename.lower().endswith('.docx') or filename.lower().endswith('.doc'):
+            elif extension == "docx":
                 raw_text = extract_text_from_docx(content)
-            elif filename.lower().endswith('.txt'):
-                raw_text = content.decode('utf-8', errors='ignore')
             else:
-                raw_text = content.decode('utf-8', errors='ignore')
+                raw_text = content.decode("utf-8-sig")
+                if "\x00" in raw_text:
+                    raise ValueError("Invalid plain text file")
 
             if not raw_text.strip():
-                logger.warning(f"File {filename} contained no readable text.")
-                raw_text = f"Resume file: {filename}\nContent extraction failed or empty document."
+                errors.append(f"{filename}: no readable text. Use a text-based document or run OCR first.")
+                continue
 
-            cid = f"cand_{uuid.uuid4().hex[:8]}"
-            parsed = parse_resume_content(raw_text, filename, cid)
-            
-            session_store.add_resume(parsed)
-            
-            from app.scoring.bias_mitigator import sanitize_demographic_bias
-            sanitized_txt, _ = sanitize_demographic_bias(raw_text, parsed["name"])
-            
-            parsed_candidates.append(CandidateParsedInfo(
-                candidate_id=parsed["candidate_id"],
-                filename=parsed["filename"],
-                name=parsed["name"],
-                email=parsed["email"],
-                phone=parsed["phone"],
-                skills=parsed["skills"],
-                experience_years=parsed["experience_years"],
-                education=parsed["education"],
-                certifications=parsed["certifications"],
-                raw_text=raw_text,
-                sanitized_text=sanitized_txt
-            ))
-        except Exception as e:
-            logger.error(f"Error parsing file {file.filename}: {e}")
-            continue
+            parsed = parse_resume_content(raw_text, filename, f"cand_{uuid.uuid4().hex}")
+            sanitized_text, _ = sanitize_demographic_bias(raw_text, parsed["name"])
+            result = CandidateParsedInfo(**parsed, sanitized_text=sanitized_text)
+            candidates.append(parsed)
+            parsed_candidates.append(result)
+        except Exception:
+            logger.warning("Resume parsing failed for a %s file.", extension)
+            errors.append(f"{filename}: could not read this file. Check the format and try again.")
 
-    if not parsed_candidates:
-        raise HTTPException(status_code=400, detail="Could not parse text from any of the uploaded files.")
-        
+    if errors:
+        raise HTTPException(status_code=400, detail=" ".join(errors))
+    if not candidates:
+        raise HTTPException(status_code=400, detail="No files uploaded.")
+
+    session_store.replace_resumes(candidates)
     return parsed_candidates
 
+
 @router.post("/parse-jd", response_model=JDParseResponse)
-async def parse_jd(payload: JDParseRequest):
+async def parse_jd(payload: JDParseRequest, session_store: SessionStore = Depends(require_session)):
     """Accept job description text, extract title, required skills and preferred skills."""
     if not payload.jd_text or not payload.jd_text.strip():
         raise HTTPException(status_code=400, detail="Job description text cannot be empty.")
@@ -131,7 +116,7 @@ async def suggest_job_titles(q: str):
     return {"query": q, "suggestions": suggestions}
 
 @router.get("/score", response_model=List[CandidateScoreResult])
-async def score_candidates():
+async def score_candidates(session_store: SessionStore = Depends(require_session)):
     """Generate sentence transformer embeddings, compute match scores, and rank all candidates."""
     if not session_store.jd_info:
         raise HTTPException(status_code=400, detail="Job description has not been provided or parsed yet.")
@@ -145,7 +130,7 @@ async def score_candidates():
     return [CandidateScoreResult(**res) for res in ranked_results]
 
 @router.get("/explain/{candidate_id}", response_model=CandidateExplanationResponse)
-async def explain_candidate_score(candidate_id: str):
+async def explain_candidate_score(candidate_id: str, session_store: SessionStore = Depends(require_session)):
     """Generate a GPT explanation of why the candidate scored their specific match score."""
     candidate_eval = session_store.get_candidate_score(candidate_id)
     if not candidate_eval:
@@ -170,7 +155,7 @@ async def explain_candidate_score(candidate_id: str):
     return CandidateExplanationResponse(**exp_data)
 
 @router.get("/generate-questions/{candidate_id}", response_model=CandidateQuestionsResponse)
-async def generate_candidate_questions(candidate_id: str):
+async def generate_candidate_questions(candidate_id: str, session_store: SessionStore = Depends(require_session)):
     """Generate 5-8 personalized interview questions based on candidate background and skill gaps."""
     candidate_eval = session_store.get_candidate_score(candidate_id)
     if not candidate_eval:
@@ -195,7 +180,7 @@ async def generate_candidate_questions(candidate_id: str):
     return CandidateQuestionsResponse(**q_data)
 
 @router.get("/generate-emails/{candidate_id}", response_model=CandidateEmailsResponse)
-async def generate_candidate_email_templates(candidate_id: str):
+async def generate_candidate_email_templates(candidate_id: str, session_store: SessionStore = Depends(require_session)):
     """Generate 3 personalized recruiter email drafts (Invite, Assessment, Rejection)."""
     candidate_eval = session_store.get_candidate_score(candidate_id)
     if not candidate_eval:
@@ -220,7 +205,7 @@ async def generate_candidate_email_templates(candidate_id: str):
     return CandidateEmailsResponse(**email_data)
 
 @router.get("/generate-onboarding/{candidate_id}", response_model=OnboardingPlanResponse)
-async def generate_candidate_onboarding_plan(candidate_id: str):
+async def generate_candidate_onboarding_plan(candidate_id: str, session_store: SessionStore = Depends(require_session)):
     """Generate a tailored 30-60-90 day onboarding and upskilling roadmap for the candidate."""
     candidate_eval = session_store.get_candidate_score(candidate_id)
     if not candidate_eval:
@@ -248,20 +233,19 @@ async def generate_candidate_onboarding_plan(candidate_id: str):
 
 async def update_candidate_status_endpoint(
     candidate_id: str,
-    payload: Dict[str, Any] = Body(...)
+    payload: CandidateMetadataUpdate,
+    session_store: SessionStore = Depends(require_session),
 ):
-    """Update candidate pipeline stage, rating, or recruiter notes."""
-    stage = payload.get("stage")
-    rating = payload.get("rating")
-    notes = payload.get("recruiter_notes")
-    
-    updated = session_store.update_candidate_status(candidate_id, stage, rating, notes)
+    """Update candidate pipeline stage, rating, notes, or tags."""
+    updated = session_store.update_candidate_status(
+        candidate_id, payload.stage, payload.rating, payload.recruiter_notes, payload.tags
+    )
     if not updated:
         raise HTTPException(status_code=404, detail="Candidate not found.")
     return {"status": "success", "candidate": updated}
 
 @router.get("/results", response_model=EvaluationResultsResponse)
-async def get_results():
+async def get_results(session_store: SessionStore = Depends(require_session)):
 
     """Return complete evaluation dashboard results payload."""
     jd_info = session_store.jd_info
@@ -295,7 +279,7 @@ async def optimize_job_description(payload: JDOptimizeRequest):
     return JDOptimizeResponse(**result)
 
 @router.get("/compensation-benchmark/{candidate_id}")
-async def get_candidate_compensation_benchmark(candidate_id: str):
+async def get_candidate_compensation_benchmark(candidate_id: str, session_store: SessionStore = Depends(require_session)):
     """Calculate market salary percentiles and budget fit for candidate."""
     candidate_eval = session_store.get_candidate_score(candidate_id)
     if not candidate_eval:
@@ -315,7 +299,7 @@ async def get_candidate_compensation_benchmark(candidate_id: str):
     return estimate_candidate_compensation(candidate_eval, candidate_info, jd_info)
 
 @router.post("/generate-offer/{candidate_id}")
-async def generate_offer_letter(candidate_id: str, payload: Dict[str, Any] = Body(default={})):
+async def generate_offer_letter(candidate_id: str, payload: Dict[str, Any] = Body(default={}), session_store: SessionStore = Depends(require_session)):
     """Generate formal customized job offer letter."""
     candidate_eval = session_store.get_candidate_score(candidate_id)
     if not candidate_eval:
@@ -335,7 +319,7 @@ async def generate_offer_letter(candidate_id: str, payload: Dict[str, Any] = Bod
     return generate_formal_offer_letter(candidate_eval, candidate_info, jd_info, payload)
 
 @router.get("/radar-metrics/{candidate_id}")
-async def get_candidate_radar_metrics(candidate_id: str):
+async def get_candidate_radar_metrics(candidate_id: str, session_store: SessionStore = Depends(require_session)):
     """Compute 6-axis competency radar and team complementarity."""
     candidate_eval = session_store.get_candidate_score(candidate_id)
     if not candidate_eval:
@@ -355,7 +339,7 @@ async def get_candidate_radar_metrics(candidate_id: str):
     return compute_candidate_radar_metrics(candidate_eval, candidate_info, jd_info)
 
 @router.post("/what-if-simulate/{candidate_id}", response_model=WhatIfResponse)
-async def simulate_candidate_upskilling(candidate_id: str, payload: WhatIfRequest):
+async def simulate_candidate_upskilling(candidate_id: str, payload: WhatIfRequest, session_store: SessionStore = Depends(require_session)):
     """Simulate candidate match score jump if specific missing skills are acquired."""
     candidate_eval = session_store.get_candidate_score(candidate_id)
     if not candidate_eval:
@@ -408,7 +392,7 @@ async def simulate_candidate_upskilling(candidate_id: str, payload: WhatIfReques
     )
 
 @router.post("/reset")
-async def reset_session():
+async def reset_session(session_store: SessionStore = Depends(require_session)):
     """Reset session state, clearing all loaded resumes and job descriptions."""
     session_store.clear()
     return {"status": "success", "message": "Session reset successfully."}
