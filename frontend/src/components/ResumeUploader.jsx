@@ -37,11 +37,16 @@ const ResumeUploader = ({ onFilesSelected, files, parsedCount, isLoading }) => {
           <UploadCloud size={20} color="#6366f1" />
           <span>1. Upload Candidate Resumes</span>
         </h2>
-        {parsedCount > 0 && (
+        {isLoading ? (
+          <span style={{ fontSize: '0.8rem', color: '#6366f1', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ width: '12px', height: '12px', border: '2px solid #6366f1', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></span>
+            Parsing Resumes...
+          </span>
+        ) : parsedCount > 0 ? (
           <span style={{ fontSize: '0.8rem', color: '#10b981', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
             <CheckCircle2 size={14} /> {parsedCount} Resumes Loaded
           </span>
-        )}
+        ) : null}
       </div>
 
       <div

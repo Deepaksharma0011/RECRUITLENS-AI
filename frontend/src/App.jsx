@@ -23,6 +23,7 @@ function App() {
   });
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [parsedCandidates, setParsedCandidates] = useState([]);
+  const [isUploading, setIsUploading] = useState(false);
   const [jdText, setJdText] = useState('');
   const [jobTitle, setJobTitle] = useState('');
   const [jdSkills, setJdSkills] = useState([]);
@@ -126,12 +127,16 @@ function App() {
     setRawRankedCandidates([]);
     setSelectedCompareIds([]);
     setErrorMsg(null);
+    setIsUploading(true);
     try {
       const parsed = await uploadResumes(uniqueFiles);
       setParsedCandidates(parsed);
+      setErrorMsg(null);
     } catch (err) {
       console.error(err);
       setErrorMsg(err.response?.data?.detail || "Failed to upload or parse resume files.");
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -221,19 +226,26 @@ Required Technical Skills:
 • Python, FastAPI, JavaScript, TypeScript, React (React.js), PostgreSQL, Docker, AWS, REST API, System Design, Git, CI/CD, Agile methodology.`);
     }
 
+    setIsUploading(true);
     try {
       const parsed = await uploadResumes(sampleFiles);
       setParsedCandidates(parsed);
+      setErrorMsg(null);
     } catch (err) {
       console.error(err);
       setErrorMsg("Failed to upload sample resumes.");
+    } finally {
+      setIsUploading(false);
     }
   };
 
   // Main evaluation trigger
   const handleEvaluatePipeline = async () => {
     setErrorMsg(null);
-    if (!parsedCandidates || parsedCandidates.length === 0) {
+    const hasFiles = Boolean(selectedFiles && selectedFiles.length > 0);
+    const hasParsed = Boolean(parsedCandidates && parsedCandidates.length > 0);
+
+    if (!hasFiles && !hasParsed) {
       setErrorMsg("Please upload candidate resumes or click 'Load 3 Sample Resumes' first.");
       return;
     }
@@ -246,10 +258,16 @@ Required Technical Skills:
     try {
       let activeParsed = parsedCandidates;
 
-      if (selectedFiles && selectedFiles.length > 0) {
+      // If files are selected and not yet parsed, parse them now seamlessly
+      if (hasFiles && (!activeParsed || activeParsed.length === 0 || activeParsed.length !== selectedFiles.length)) {
         const uniqueFiles = deduplicateFiles(selectedFiles);
         activeParsed = await uploadResumes(uniqueFiles);
         setParsedCandidates(activeParsed);
+      }
+
+      if (!activeParsed || activeParsed.length === 0) {
+        setErrorMsg("Failed to extract candidate resumes. Please re-upload your files.");
+        return;
       }
 
       const jdRes = await parseJD(jdText, jobTitle);
@@ -424,16 +442,18 @@ Required Technical Skills:
               <button
                 className="btn-secondary"
                 onClick={handleLoadSampleResumes}
+                disabled={isUploading}
                 style={{ background: 'rgba(6, 182, 212, 0.15)', borderColor: 'rgba(6, 182, 212, 0.3)', color: 'var(--accent-cyan)' }}
               >
                 <Sparkles size={14} />
-                <span>Load 3 Sample Resumes</span>
+                <span>{isUploading ? 'Loading Sample Resumes...' : 'Load 3 Sample Resumes'}</span>
               </button>
             </div>
 
             <ResumeUploader
               files={selectedFiles}
               parsedCount={parsedCandidates.length}
+              isLoading={isUploading}
               onFilesSelected={handleFilesSelected}
             />
 
